@@ -1,0 +1,8 @@
+Memoir - The use of function package.
+
+* (sequential) enables the preprocessing of pattern - if the equations are already disjoint and complete, then there is no need for this option. Note that this only works with constructor patterns.
+* function definition produces a proof obligation which expresses (i) completeness and (ii) compatibility of patterns. (pat_completeness: pattern_completeness, and auto can solve these two).
+* (termination) terminates the proof. There are many methods to terminate proof. (lexicographical_order is the default one, it terminates by searching for a suitable lexicographic combination of size measures).
+(relation method customize the termination goal, to do this we need to prove the relation is wellfounded and the arguments of recursive calls indeed decrease with respect to the relation).
+(size_change can be used for more complex cases).
+* HOL is a logic of total functions, partial functions can be defined, but with a trick.
