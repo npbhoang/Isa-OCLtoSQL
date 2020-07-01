@@ -13,10 +13,10 @@ datatype objectModel = OM "pair list"
 fun doNothing :: "string \<Rightarrow> int" where
 "doNothing s = 0"
 
-function (sequential) findAtt :: "col \<Rightarrow> objectModel \<Rightarrow> (string \<Rightarrow> int)" where
+function findAtt :: "col \<Rightarrow> objectModel \<Rightarrow> (string \<Rightarrow> int)" where
 "findAtt _ (OM Nil) = doNothing" |
 "findAtt col (OM (Cons (Pair col1 f) xs)) = 
-(if equalCol col col1 then f else findAtt col (OM xs))" 
+(if equalCol col col1 then f else findAtt col (OM xs))"
   by pat_completeness auto
 
 fun equalPerson :: "Person \<Rightarrow> Person \<Rightarrow> bool" where
