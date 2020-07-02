@@ -3,7 +3,7 @@ theory MyOCL
 begin
 
 type_synonym var = string
-type_synonym att = string
+datatype att = AGE | EMAIL | ID
 (*
 type_synonym assoc = string
 *)
