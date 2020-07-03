@@ -4,15 +4,13 @@ begin
 
 type_synonym var = string
 
-type_synonym table = string
+datatype table = PERSON
 datatype col = AGE  | EMAIL | ID
-
 
 datatype exp = Int int 
   | Var var 
   | Eq exp exp
   | Col col
-
 
 datatype whereClause = WHERE exp
 

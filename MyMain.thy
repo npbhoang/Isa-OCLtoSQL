@@ -1,6 +1,7 @@
 theory MyMain
   imports Main MyOCL MySQL
 begin
+
 (* Person(id, age, email) *)
 datatype Person = P string int string
 type_synonym persons = "Person list" 
