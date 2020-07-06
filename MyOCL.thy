@@ -11,6 +11,8 @@ datatype OCLexp = Int int
   | Eq OCLexp OCLexp
   | Att var att
   | As var as
+  | Size OCLexp
+  | IsEmpty OCLexp
 
 fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 "transAtt MyOCL.AGE = MySQL.AGE" |
@@ -22,13 +24,18 @@ fun transAs :: "MyOCL.as \<Rightarrow> MySQL.col" where
 "transAs MyOCL.LECTURERS = MySQL.LECTURERS"
 
 fun eval :: "OCLexp \<Rightarrow> persons \<Rightarrow> val" where
-"eval (MyOCL.Int i) ps = VInt i" |
-"eval (MyOCL.Var x) ps = VString x" |
+"eval (MyOCL.Int i) ps = VList [VInt i]" |
+"eval (MyOCL.Var x) ps = VList [VString x]" |
 "eval (MyOCL.Eq e1 e2) ps = 
-VBool (equalVal (eval e1 ps) (eval e2 ps))" |
+VList [VBool (equalVal (eval e1 ps) (eval e2 ps))]" |
 "eval (MyOCL.Att v att) ps 
-= ext v (transAtt att) ps" |
+= VList [ext v (transAtt att) ps]" |
 "eval (MyOCL.As v as) ps 
-= ext v (transAs as) ps"
+= ext v (transAs as) ps" |
+"eval (Size exp) ps 
+= VList [VInt (count (eval exp ps))]" |
+"eval (IsEmpty exp) ps 
+= VList [VBool (isEmpty (eval exp ps))]" 
+
 
 end

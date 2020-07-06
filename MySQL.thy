@@ -11,61 +11,93 @@ datatype exp = Int int
   | Var var 
   | Eq exp exp
   | Col col
+  | Count col
 
 datatype whereClause = WHERE exp
 
 datatype SQLstm = Select exp 
   | SelectFrom exp fromItem
-  | SelectFromWhere exp fromItem whereClause 
-and  fromItem = FROM table |  Subselect SQLstm
+| SelectFromWhere exp fromItem whereClause 
+and fromItem = Table table | Subselect SQLstm
 
 fun isID :: "col \<Rightarrow> table \<Rightarrow> bool" where
 "isID (ID) t = True " |
 "isID _ _ = False"
 
-(* temp: This only takes a column, should also take a table 
-or a col has info of a table*)
-fun proj :: "col \<Rightarrow> Person \<Rightarrow> val" where
-"proj (AGE) (P pid page pemail pstudents plecturers) = VInt page" |
-"proj (EMAIL) (P pid page pemail pstudents plecturers) = VString pemail" |
-"proj (ID) (P pid page pemail pstudents plecturers) = VString pid" |
-"proj (STUDENTS) (P pid page pemail pstudents plecturers) = mapList pstudents" |
-"proj (LECTURERS) (P pid page pemail pstudents plecturers) = mapList plecturers"
+fun execFrom :: "fromItem \<Rightarrow> persons \<Rightarrow> val" where
+"execFrom (Table _) ps  = mapList ps" |
+"execFrom (Subselect _) ps = VNULL"
+
+fun sat :: "val \<Rightarrow> exp \<Rightarrow> bool" where
+"sat v e = True"
+
+fun proj :: "exp \<Rightarrow> val \<Rightarrow> val" where 
+"proj (Col AGE) (VPerson (P pid page pemail pstudents plecturers)) 
+= VInt page" |
+"proj (Col EMAIL) (VPerson (P pid page pemail pstudents plecturers)) 
+= VString pemail" |
+"proj (Col ID) (VPerson (P pid page pemail pstudents plecturers)) 
+= VString pid" |
+"proj (Col STUDENTS) (VPerson (P pid page pemail pstudents plecturers)) 
+= mapList pstudents" |
+"proj (Col LECTURERS) (VPerson (P pid page pemail pstudents plecturers)) 
+= mapList plecturers" |
+"proj (MySQL.Int i) v = VInt i" |
+"proj (Var var) v = VString var" |
+"proj (Eq e1 e2) v = VBool (equalVal (proj e1 v) (proj e2 v))" |
+"proj (MySQL.Count STUDENTS) (VPerson (P pid page pemail pstudents plecturers))  = VInt (count (mapList pstudents))" |
+"proj (MySQL.Count LECTURERS) (VPerson (P pid page pemail pstudents plecturers))  = VInt (count (mapList plecturers))" |
+"proj _ _ = VNULL"
+
+(* proj (Count col.LECTURERS) (extElement self om) = VInt (count (ext self col.LECTURERS om))*)
 
 fun ext :: "var \<Rightarrow> col \<Rightarrow> persons \<Rightarrow> val" where
-"ext v col Nil = VString ''null''" |
+"ext v col Nil = VNULL" |
 "ext v col (Cons (P pid page pemail pstudents plecturers) ps) = 
-(if (v = pid) then (proj col (P pid page pemail pstudents plecturers))  
+(if (v = pid) 
+then (proj (Col col) (VPerson (P pid page pemail pstudents plecturers))) 
 else (ext v col ps))"
 
+fun extElement :: "var \<Rightarrow> persons \<Rightarrow> val" where
+"extElement v Nil = VNULL" |
+"extElement v (Cons (P pid page pemail pstudents plecturers) ps) =
+(if v = pid then VPerson (P pid page pemail pstudents plecturers)
+else extElement v ps)"
+
+fun filterWhere :: "val \<Rightarrow> whereClause \<Rightarrow> val" where
+"filterWhere (VList Nil) (WHERE e) = VList Nil" |
+"filterWhere (VList (Cons v vs)) (WHERE e)
+= (if sat v e 
+then (appList v (filterWhere (VList vs) (WHERE e)))   
+else filterWhere (VList vs) (WHERE e))" |
+"filterWhere v e = v"
+
+fun select :: "val \<Rightarrow> exp \<Rightarrow> val" where
+"select VNULL (MySQL.Int i) = VList [VInt i]" |
+"select VNULL (MySQL.Var var) = VList [VString var]" |
+"select VNULL (MySQL.Eq e1 e2) = 
+VList [VBool (equalVal (select VNULL e1) (select VNULL e2))]" |
+"select VNULL COUNT = VList [VInt 0]" |
+
+"select (VList []) exp = VList []" |
+"select (VList (v#vs)) exp =
+appList (proj exp v) (select (VList vs) exp)"
+
+(*
+select (VList [extElement var persons]) (Col col.LECTURERS)
+proj (Col col.LECTURERS) (extElement var persons)
+*)
+
 function (sequential) exec :: "SQLstm \<Rightarrow> persons \<Rightarrow> val" where
-"exec (Select (MySQL.Int i)) ps  = VInt i" |
-"exec (Select (MySQL.Var v)) ps = VString v" |
-"exec (Select (MySQL.Col _)) ps = VString ''null''" |
-"exec (Select (MySQL.Eq (MySQL.Var v1) (MySQL.Var v2))) ps = 
-VBool (v1 = v2)" |
-"exec (Select (MySQL.Eq (MySQL.Int i1) (MySQL.Int i2))) ps = 
-VBool (i1 = i2)" |
-"exec (Select (MySQL.Eq (MySQL.Col c1) (MySQL.Col c2))) ps = 
-VBool (c1 = c2)" |
-"exec (Select (MySQL.Eq _ _)) ps = VBool False" |
-(* TBC: partial definition *)
-"exec (SelectFrom _ _) ps = VBool False" |
-(* FROM_WHERE *)
-"exec (SelectFromWhere (MySQL.Col col) (FROM table1) 
-(WHERE (MySQL.Eq (MySQL.Col col2) (MySQL.Var v)))) ps
-= (if isID col2 table1 
-then (ext v col ps) 
-else VBool False)" |
+"exec (Select selitems) ps  = select VNULL selitems" |
 
-"exec (SelectFromWhere (MySQL.Eq (MySQL.Col col1) (MySQL.Int i)) 
-(FROM table) 
-(WHERE (MySQL.Eq (MySQL.Col col2) (MySQL.Var v)))) ps
-= VBool (equalVal (exec (SelectFromWhere (MySQL.Col col1) (FROM table) 
-(WHERE (MySQL.Eq (MySQL.Col col2) (MySQL.Var v)))) ps ) (VInt i))" |
+"exec (SelectFrom selitems fromItem) ps 
+= select (execFrom fromItem ps) selitems" |
 
-"exec _ ps = VBool False"
-by pat_completeness auto
+"exec (SelectFromWhere selitems fromItem whereExp) ps
+= select (filterWhere (execFrom fromItem ps) whereExp) selitems"
+
+  by pat_completeness auto
 termination by size_change
 
 end
