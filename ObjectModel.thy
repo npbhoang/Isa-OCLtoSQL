@@ -10,18 +10,19 @@ type_synonym persons = "Person list"
 datatype val =  VNULL | VInt int | VString string 
   |  VBool bool | VPerson Person | VList "val list"
 
-fun appList :: "val \<Rightarrow> val \<Rightarrow> val" where
-"appList v (VList vs) = VList (v#vs)" |
-"appList v VNULL = VNULL" |
-"appList _ _ = VNULL"
+fun appendList :: "val \<Rightarrow> val \<Rightarrow> val" where
+"appendList VNULL v = v" |
+"appendList v VNULL = VNULL" |
+"appendList v (VList vs) = VList (v#vs)" |
+"appendList _ _ = VNULL"
 
-fun mapList :: "persons \<Rightarrow> val" where
-"mapList Nil = VList []" |
-"mapList (Cons p ps) = appList (VPerson p) (mapList ps)"
+fun mapPersonsToVList :: "persons \<Rightarrow> val" where
+"mapPersonsToVList Nil = VList Nil" |
+"mapPersonsToVList (p#ps) = appendList (VPerson p) (mapPersonsToVList ps)"
 
-fun isEmpty :: "val \<Rightarrow> bool" where 
-"isEmpty (VList Nil) = True" |
-"isEmpty _ = False"
+fun isEmptyVList :: "val \<Rightarrow> bool" where 
+"isEmptyVList (VList Nil) = True" |
+"isEmptyVList _ = False"
 
 fun equalVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 "equalVal (VInt i1) (VInt i2) = (i1 = i2)" |
@@ -33,8 +34,9 @@ fun equalVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 (if (equalVal v1 v2) then (equalVal (VList v1s) (VList v2s)) else False)" |
 "equalVal _ _ = False" 
 
-fun count :: "val \<Rightarrow> int" where 
-"count (VList Nil) = 0" |
-"count (VList (v#vs)) = 1 + count (VList vs)" 
+fun countVList :: "val \<Rightarrow> int" where 
+"countVList (VList Nil) = 0" |
+"countVList (VList (v#vs)) = 1 + countVList (VList vs)" |
+"countVList _ = 0"
 
 end

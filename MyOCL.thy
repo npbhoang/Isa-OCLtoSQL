@@ -33,9 +33,8 @@ VList [VBool (equalVal (eval e1 ps) (eval e2 ps))]" |
 "eval (MyOCL.As v as) ps 
 = ext v (transAs as) ps" |
 "eval (Size exp) ps 
-= VList [VInt (count (eval exp ps))]" |
+= VList [VInt (countVList (eval exp ps))]" |
 "eval (IsEmpty exp) ps 
-= VList [VBool (isEmpty (eval exp ps))]" 
-
+= VList [VBool (isEmptyVList (eval exp ps))]"
 
 end
