@@ -51,17 +51,23 @@ fun proj :: "exp \<Rightarrow> val \<Rightarrow> val" where
 
 (* proj (Count col.LECTURERS) (extElement self om) = VInt (count (ext self col.LECTURERS om))*)
 
+fun isIdPerson :: "var \<Rightarrow> Person \<Rightarrow> bool" where
+"isIdPerson v (P pid page pemail pstudents plecturers) 
+= (v = pid)"
+
 fun ext :: "var \<Rightarrow> col \<Rightarrow> persons \<Rightarrow> val" where
 "ext v col Nil = VNULL" |
-"ext v col (Cons (P pid page pemail pstudents plecturers) ps) = 
-(if (v = pid) 
-then (proj (Col col) (VPerson (P pid page pemail pstudents plecturers))) 
+"ext v col (Cons p ps) = 
+(if (isIdPerson v p) 
+then (proj (Col col) (VPerson p)) 
 else (ext v col ps))"
+
+
 
 fun extElement :: "var \<Rightarrow> persons \<Rightarrow> val" where
 "extElement v Nil = VNULL" |
-"extElement v (Cons (P pid page pemail pstudents plecturers) ps) =
-(if v = pid then VPerson (P pid page pemail pstudents plecturers)
+"extElement v (Cons p ps) =
+(if (isIdPerson v p) then (VPerson p)
 else extElement v ps)"
 
 fun filterWhere :: "val \<Rightarrow> whereClause \<Rightarrow> val" where

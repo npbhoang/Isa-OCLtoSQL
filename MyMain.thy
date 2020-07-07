@@ -9,43 +9,14 @@ proof auto
 qed
 
 
-lemma lem1 : "\<forall> persons var. filterWhere (mapList persons) 
+lemma lem1 : "filterWhere (mapList persons) 
 (WHERE (MySQL.Eq (Col MySQL.ID) (MySQL.Var var)))
 = VList [extElement var persons]"
   sorry
 
-fun equalVar :: "var \<Rightarrow> Person \<Rightarrow> bool" where
-"equalVar v (P pid page pemail pstudents plecturers) = (v = pid)"
 
-lemma lemSQL1 : "equalVar v p \<Longrightarrow> 
-extElement v (Cons p ps)
- = VPerson p"
-  apply (induct p)
-  apply (auto)
-  done
 
-lemma lemSQL2 : "\<not>equalVar v p \<Longrightarrow> 
-extElement v (Cons p ps)
-= extElement v ps"
-  apply (induct p)
-  apply (auto)
-  done
-
-lemma lemSQL3 : "equalVar v p \<Longrightarrow> 
-ext v col (Cons p ps)
-= proj (Col col) (VPerson p)"
-  apply (induct p)
-  apply auto
-  done
-
-lemma lemSQL4 : "\<not>equalVar v p \<Longrightarrow> 
-ext v col (Cons p ps)
-= ext v col ps"
-apply (induct p)
-  apply auto
-  done
-
-lemma lem2 : "\<forall> col v. proj (Col col) (extElement v om) 
+lemma lem2 : "proj (Col col) (extElement v om) 
 = ext v col om"
 proof (induct om)
   case Nil
@@ -53,16 +24,8 @@ proof (induct om)
     by simp
 next
   case (Cons p ps)
-  then show ?case
-  proof (cases "equalVar v p")
-    case True
-    then show ?thesis 
-      using lemSQL1 lemSQL2 lemSQL3 lemSQL4 by metis
-  next
-    case False
-    then show ?thesis 
-      using lemSQL1 lemSQL2 lemSQL3 lemSQL4 by metis
-  qed
+then show ?case
+  by simp
 qed
  
 (* self.age = 30 *)
