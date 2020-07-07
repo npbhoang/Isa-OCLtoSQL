@@ -76,8 +76,8 @@ fun select :: "val \<Rightarrow> exp \<Rightarrow> val" where
 "select VNULL (MySQL.Var var) = VList [VString var]" |
 "select VNULL (MySQL.Eq e1 e2) = 
 VList [VBool (equalVal (select VNULL e1) (select VNULL e2))]" |
-"select VNULL COUNT = VList [VInt 0]" |
-
+"select VNULL (Count col) = VList [VInt 0]" |
+"select VNULL (Col col) = VNULL" |
 "select (VList Nil) exp = VList Nil" |
 "select (VList (v#vs)) exp = 
 appendList (proj exp v) (select (VList vs) exp)"
