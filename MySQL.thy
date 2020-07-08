@@ -12,6 +12,7 @@ datatype exp = Int nat
   | Eq exp exp
   | Col col
   | Count col
+  | CountAll
 
 datatype whereClause = WHERE exp
 
@@ -82,7 +83,7 @@ v stands in the column col *)
 fun extEnrollment :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
 "extEnrollment v col Nil = Nil" 
   | "extEnrollment v col (e#es) = (if isAssociation v col e 
-    then  (VEnrollment e)#(extEnrollment v col es) 
+    then (VEnrollment e)#(extEnrollment v col es) 
     else extEnrollment v col es)"
 
 fun filterWhere :: "val \<Rightarrow> whereClause \<Rightarrow> val" where
@@ -103,14 +104,22 @@ fun select :: "val \<Rightarrow> exp \<Rightarrow> val list" where
     (proj exp v) # (select (VList vs) exp)"
 
 fun exec :: "SQLstm \<Rightarrow> Objectmodel \<Rightarrow> val" where
-"exec (Select selitems) ps  = VList (select VNULL selitems)"
-  | "exec (SelectFrom (Count col) fromItem) ps
-    = VList [VInt (sizeValList (VList (select (execFrom fromItem ps) (Col col))))]" 
-  | "exec (SelectFrom exp fromItem) ps 
-    = VList (select (execFrom fromItem ps) exp)" 
-  | "exec (SelectFromWhere (Count col) fromItem whereExp) ps
-    = VList [VInt (sizeValList (VList (select (filterWhere (execFrom fromItem ps) whereExp) (Col col))))]" 
-  | "exec (SelectFromWhere exp fromItem whereExp) ps
-    = VList (select (filterWhere (execFrom fromItem ps) whereExp) exp)"
+"exec (Select selitems) om  = VList (select VNULL selitems)"
+  | "exec (SelectFrom (Count col) fromItem) om
+    = VList [VInt (sizeValList (VList (select (execFrom fromItem om) (Col col))))]" 
+  | "exec (SelectFrom (Eq (Count col) (MySQL.Int i)) fromItem) om
+    = VList [VBool ((sizeValList (VList (select (execFrom fromItem om) (Col col)))) = i)]"
+  | "exec (SelectFrom (Eq (CountAll) (MySQL.Int i)) fromItem) om
+    = VList [VBool ((sizeValList (execFrom fromItem om)) = i)]"
+  | "exec (SelectFrom exp fromItem) om 
+    = VList (select (execFrom fromItem om) exp)" 
+  | "exec (SelectFromWhere (Eq (Count col) (MySQL.Int i)) fromItem whereExp) om
+    = VList [VBool (sizeValList (VList (select (filterWhere (execFrom fromItem om) whereExp) (Col col))) = i)]"
+  | "exec (SelectFromWhere (Eq (CountAll) (MySQL.Int i)) fromItem whereExp) om
+    = VList [VBool ((sizeValList (filterWhere (execFrom fromItem om) whereExp)) = i)]"
+  | "exec (SelectFromWhere (Count col) fromItem whereExp) om
+    = VList [VInt (sizeValList (VList (select (filterWhere (execFrom fromItem om) whereExp) (Col col))))]" 
+  | "exec (SelectFromWhere exp fromItem whereExp) om
+    = VList (select (filterWhere (execFrom fromItem om) whereExp) exp)"
 
 end

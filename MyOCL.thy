@@ -12,6 +12,7 @@ datatype OCLexp = Int nat
   | Att var att
   | As var as
   | Size OCLexp
+  | IsEmpty OCLexp
 
 fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 "transAtt MyOCL.AGE = MySQL.AGE" |
@@ -33,5 +34,7 @@ VList [VBool (equalVal (eval e1 om) (eval e2 om))]"
 = VList (extCol v (transAs as) (getEnrollmentList om))"
 | "eval (MyOCL.Size exp) om 
 = VList [VInt (sizeValList (eval exp om))]"
+| "eval (MyOCL.IsEmpty exp) om
+= VList [VBool (isEmptyValList (eval exp om))]"
 
 end

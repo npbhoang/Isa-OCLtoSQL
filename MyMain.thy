@@ -55,6 +55,19 @@ lemma "eval (MyOCL.Size (MyOCL.As self MyOCL.LECTURERS)) (OM ps es)
    apply auto
   done  
 
+lemma EqualSize_extEnrollment_extCol : "sizeValList (VList (extEnrollment var col enrollments)) 
+= sizeValList (VList (extCol var (opposite col) enrollments))"
+  sorry
+
+(* self.lecturers\<rightarrow>isEmpty() \<equiv> SELECT COUNT * = 0 FROM Enrollment WHERE students = self *)
+lemma "eval (MyOCL.IsEmpty (MyOCL.As self MyOCL.LECTURERS)) (OM ps es)
+= exec (SelectFromWhere (MySQL.Eq (MySQL.CountAll) (MySQL.Int 0)) 
+(Table ENROLLMENT)
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (OM ps es)"
+  apply auto
+   apply(simp_all add: lem4 EqualSize_extEnrollment_extCol)
+  done  
+
 end
 
   

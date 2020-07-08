@@ -56,4 +56,7 @@ fun sizeValList :: "val \<Rightarrow> nat" where
 "sizeValList (VList []) = 0" |
 "sizeValList (VList (x#xs)) = Suc (sizeValList (VList xs))"
 
+fun isEmptyValList :: "val \<Rightarrow> bool" where
+"isEmptyValList v = (sizeValList v = 0)"
+
 end
