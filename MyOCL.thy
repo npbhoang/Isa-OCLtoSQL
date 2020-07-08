@@ -6,13 +6,12 @@ type_synonym var = string
 datatype att = AGE | EMAIL | ID
 datatype as = LECTURERS | STUDENTS
 
-datatype OCLexp = Int int 
+datatype OCLexp = Int nat 
   | Var var 
   | Eq OCLexp OCLexp
   | Att var att
   | As var as
   | Size OCLexp
-  | IsEmpty OCLexp
 
 fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 "transAtt MyOCL.AGE = MySQL.AGE" |
@@ -23,18 +22,16 @@ fun transAs :: "MyOCL.as \<Rightarrow> MySQL.col" where
 "transAs MyOCL.STUDENTS = MySQL.STUDENTS" |
 "transAs MyOCL.LECTURERS = MySQL.LECTURERS"
 
-fun eval :: "OCLexp \<Rightarrow> persons \<Rightarrow> val" where
-"eval (MyOCL.Int i) ps = VList [VInt i]" |
-"eval (MyOCL.Var x) ps = VList [VString x]" |
-"eval (MyOCL.Eq e1 e2) ps = 
-VList [VBool (equalVal (eval e1 ps) (eval e2 ps))]" |
-"eval (MyOCL.Att v att) ps 
-= VList [ext v (transAtt att) ps]" |
-"eval (MyOCL.As v as) ps 
-= ext v (transAs as) ps" |
-"eval (Size exp) ps 
-= VList [VInt (countVList (eval exp ps))]" |
-"eval (IsEmpty exp) ps 
-= VList [VBool (isEmptyVList (eval exp ps))]"
+fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val" where
+"eval (MyOCL.Int i) om = VList [VInt i]"
+| "eval (MyOCL.Var x) om = VList [VString x]"
+| "eval (MyOCL.Eq e1 e2) om = 
+VList [VBool (equalVal (eval e1 om) (eval e2 om))]" 
+| "eval (MyOCL.Att v att) om 
+= VList [ext v (transAtt att) (getPersonList om)]"
+| "eval (MyOCL.As v as) om 
+= VList (extCol v (transAs as) (getEnrollmentList om))"
+| "eval (MyOCL.Size exp) om 
+= VList [VInt (sizeValList (eval exp om))]"
 
 end
