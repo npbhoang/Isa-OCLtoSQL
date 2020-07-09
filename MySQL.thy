@@ -10,9 +10,7 @@ datatype col = AGE | EMAIL | ID | LECTURERS | STUDENTS
 datatype exp = Int nat 
   | Var var 
   | Eq exp exp
-  | AggEq exp exp
   | GrtThan exp exp
-  | AggGrtThan exp exp
   | And exp exp
   | Col col
   | Count col
@@ -99,19 +97,36 @@ fun extEnrollment :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Righ
 (* select takes a list of val [context] and for element
 executes the expression *)
 fun select :: "val \<Rightarrow> exp \<Rightarrow> val list" where
-"select val (Col col) = [proj (Col col) val]"
+"select val (MySQL.Int i) = [VInt i]"
+  | "select val (Col col) = [proj (Col col) val]"
   | "select val (Eq e1 e2) = [VBool (equalVal (VList (select val e1)) (VList (select val e2)))]"
   | "select val (And e1 e2) = [VBool (andVal (VList (select val e1)) (VList (select val e2)))]"
 
+fun selectNoCtx :: "exp \<Rightarrow> val list" where
+"selectNoCtx (MySQL.Int i) = [VInt i]"
+| "selectNoCtx (MySQL.Var v) = [VString v]"
+| "selectNoCtx (MySQL.Eq e1 e2) = [VBool (equalVal (VList (selectNoCtx e1)) (VList (selectNoCtx e2)))]"
+
+fun sucVal :: "val list \<Rightarrow> val list" where
+"sucVal [VInt i] = [VInt (Suc i)]"
+
 fun selectList :: "val \<Rightarrow> exp \<Rightarrow> val list" where
-"selectList (VList vs) (Count col) = [VInt (sizeValList (VList (selectList (VList vs) (Col col))))]"
-| "selectList (VList vs) CountAll = [VInt (sizeValList (VList vs))]"
-| "selectList (VList vs) (AggEq (Count col) (MySQL.Int i)) 
-= [VBool (equalVal (VList (selectList (VList vs) (Count col))) (VList [VInt i]))]"
-| "selectList (VList vs) (AggEq (CountAll) (MySQL.Int i)) 
-= [VBool (equalVal (VList (selectList (VList vs) (CountAll))) (VList [VInt i]))]"
-| "selectList (VList Nil) exp = Nil"
-| "selectList (VList (v#vs)) exp = (select v exp) @ (selectList (VList vs) exp)"
+"selectList VNULL exp = selectNoCtx exp"
+| "selectList (VList Nil) (Count col) = [VInt 0]"
+
+| "selectList (VList Nil) (CountAll) = [VInt 0]"
+| "selectList (VList (v#vs)) (CountAll) = [VInt (Suc (sizeVal (VList (selectList (VList vs) (CountAll)))))]"
+| "selectList (VList Nil) (Eq (CountAll) (MySQL.Int i)) = [VBool (i = 0)]"
+| "selectList (VList (v#vs)) (Eq (CountAll) (MySQL.Int i))
+= [VBool (equalVal (VList [VInt (Suc (sizeVal (VList (selectList (VList vs) (CountAll)))))]) (VList [VInt i]))]"
+| "selectList (VList Nil) (MySQL.Int i) = Nil"
+| "selectList (VList (v#vs)) (MySQL.Int i) = (select v (MySQL.Int i)) @ (selectList (VList vs) (MySQL.Int i))"
+| "selectList (VList Nil) (Col col) = Nil"
+| "selectList (VList (v#vs)) (Col col) = (select v (Col col)) @ (selectList (VList vs) (Col col))"
+| "selectList (VList Nil) (MySQL.Eq e1 e2) = Nil"
+| "selectList (VList (v#vs)) (Eq e1 e2) = (select v (Eq e1 e2)) @ (selectList (VList vs) (Eq e1 e2))"
+| "selectList (VList Nil) (MySQL.And e1 e2) = Nil"
+| "selectList (VList (v#vs)) (And e1 e2) = (select v (And e1 e2)) @ (selectList (VList vs) (And e1 e2))"
 
 fun filterWhere :: "val \<Rightarrow> whereClause \<Rightarrow> val" where
 "filterWhere (VList Nil) (WHERE (Eq e1 e2)) = VList Nil" 
@@ -120,14 +135,11 @@ fun filterWhere :: "val \<Rightarrow> whereClause \<Rightarrow> val" where
     else filterWhere (VList vs) (WHERE e))"
 
 fun exec :: "SQLstm \<Rightarrow> Objectmodel \<Rightarrow> val" where
-"exec (Select selitems) om  = VList (select VNULL selitems)"
+"exec (Select selitems) om  = VList (selectList VNULL selitems)"
   | "exec (SelectFrom exp fromItem) om 
-    = VList (select (execFrom fromItem om) exp)" 
-  | "exec (SelectFromWhere (Count col) fromItem whereExp) om
-    = VList [VInt (sizeValList (VList (select (filterWhere (execFrom fromItem om) whereExp) (Col col))))]" 
+    = VList (selectList (execFrom fromItem om) exp)"
 (* SelectFromWhere is simplified to select with the fromitem filtered out by where *)
   | "exec (SelectFromWhere exp fromItem whereExp) om
     = VList (selectList (filterWhere (execFrom fromItem om) whereExp) exp)"
-
 
 end

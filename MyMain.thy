@@ -53,13 +53,13 @@ lemma "eval (MyOCL.Size (MyOCL.As self MyOCL.LECTURERS)) (OM ps es)
   apply(simp add: lem4)
   apply (induct es)
    apply auto
-  done  
+  sorry 
 
 lemma opp_opp: "opposite (opposite col) = col"
   sorry
 
-lemma EqualSize_extEnrollment_extCol : "sizeValList (VList (extEnrollment var col enrollments)) 
-= sizeValList (VList (extCol var (opposite col) enrollments))"
+lemma EqualSize_extEnrollment_extCol : "sizeVal (VList (extEnrollment var col enrollments)) 
+= sizeVal (VList (extCol var (opposite col) enrollments))"
   apply(induct enrollments)
    apply(simp)
   apply(simp add: opp_opp)
@@ -71,7 +71,9 @@ lemma "eval (MyOCL.IsEmpty (MyOCL.As self MyOCL.LECTURERS)) (OM ps es)
 (Table ENROLLMENT)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (OM ps es)"
   apply auto
-   apply(simp_all add: lem4 EqualSize_extEnrollment_extCol)
+  apply(simp_all add: lem4 EqualSize_extEnrollment_extCol)
+  apply(induct es)
+  apply auto
   done  
 
 (* self.lecturers\<rightarrow>exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students

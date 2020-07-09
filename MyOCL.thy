@@ -34,9 +34,9 @@ VList [VBool (equalVal (evalWithCtx e1 om var val) (evalWithCtx e2 om var val))]
 | "evalWithCtx (MyOCL.As v as) om var val
 = (if (v=var) then (projList (Col (transAs as)) val) else (VList (extCol v (transAs as) (getEnrollmentList om))))"
 | "evalWithCtx (MyOCL.Size exp) om var val
-= VList [VInt (sizeValList (evalWithCtx exp om var val))]"
+= VList [VInt (sizeVal (evalWithCtx exp om var val))]"
 | "evalWithCtx (MyOCL.IsEmpty exp) om var val
-= VList [VBool (isEmptyValList (evalWithCtx exp om var val))]"
+= VList [VBool (isEmptyVal (evalWithCtx exp om var val))]"
 | "evalWithCtx (MyOCL.Exists src v body) om var val
 = (evalWithCtx src om var val)"
 
@@ -56,10 +56,10 @@ VList [VBool (equalVal (eval e1 om) (eval e2 om))]"
 | "eval (MyOCL.As v as) om 
 = VList (extCol v (transAs as) (getEnrollmentList om))"
 | "eval (MyOCL.Size exp) om 
-= VList [VInt (sizeValList (eval exp om))]"
+= VList [VInt (sizeVal (eval exp om))]"
 | "eval (MyOCL.IsEmpty exp) om
-= VList [VBool (isEmptyValList (eval exp om))]"
+= VList [VBool (isEmptyVal (eval exp om))]"
 | "eval (MyOCL.Exists src v body) om
-= VList [VBool (\<not> isEmptyValList (filterWithBody (eval src om) v body om))]"
+= VList [VBool (\<not> isEmptyVal (filterWithBody (eval src om) v body om))]"
                       
 end

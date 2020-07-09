@@ -57,12 +57,16 @@ fun appendList :: "val \<Rightarrow> val \<Rightarrow> val" where
 "appendList v VNULL = VNULL" |
 "appendList v (VList vs) = VList (v#vs)"
 
-fun sizeValList :: "val \<Rightarrow> nat" where
-"sizeValList (VList []) = 0" |
-"sizeValList (VList (x#xs)) = Suc (sizeValList (VList xs))"
+fun sizeValList :: "val list\<Rightarrow> nat" where
+"sizeValList [] = 0" |
+"sizeValList (x#xs) = Suc (sizeValList xs)"
 
-fun isEmptyValList :: "val \<Rightarrow> bool" where
-"isEmptyValList v = (sizeValList v = 0)"
+fun sizeVal :: "val \<Rightarrow> nat" where
+"sizeVal (VList []) = 0" |
+"sizeVal (VList (x#xs)) = Suc (sizeVal (VList xs))"
+
+fun isEmptyVal :: "val \<Rightarrow> bool" where
+"isEmptyVal v = (sizeVal v = 0)"
 
 fun isTrue :: "val \<Rightarrow> bool" where
 "isTrue (VList [VBool (True)]) = True"
