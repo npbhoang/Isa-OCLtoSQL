@@ -13,6 +13,7 @@ datatype OCLexp = Int nat
   | As var as
   | Size OCLexp
   | IsEmpty OCLexp
+  | Exists OCLexp var OCLexp
 
 fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 "transAtt MyOCL.AGE = MySQL.AGE" |
@@ -22,6 +23,28 @@ fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 fun transAs :: "MyOCL.as \<Rightarrow> MySQL.col" where
 "transAs MyOCL.STUDENTS = MySQL.STUDENTS" |
 "transAs MyOCL.LECTURERS = MySQL.LECTURERS"
+
+fun evalWithCtx :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> var \<Rightarrow> val \<Rightarrow> val" where
+"evalWithCtx (MyOCL.Int i) om var val = VList [VInt i]"
+| "evalWithCtx (MyOCL.Var x) om var val = (if (x = var) then (VList[val]) else (VList[VString x]))"
+| "evalWithCtx (MyOCL.Eq e1 e2) om var val = 
+VList [VBool (equalVal (evalWithCtx e1 om var val) (evalWithCtx e2 om var val))]" 
+| "evalWithCtx (MyOCL.Att v att) om var val
+= (if (v=var) then (projList (Col (transAtt att)) val) else (VList [ext v (transAtt att) (getPersonList om)]))"
+| "evalWithCtx (MyOCL.As v as) om var val
+= (if (v=var) then (projList (Col (transAs as)) val) else (VList (extCol v (transAs as) (getEnrollmentList om))))"
+| "evalWithCtx (MyOCL.Size exp) om var val
+= VList [VInt (sizeValList (evalWithCtx exp om var val))]"
+| "evalWithCtx (MyOCL.IsEmpty exp) om var val
+= VList [VBool (isEmptyValList (evalWithCtx exp om var val))]"
+| "evalWithCtx (MyOCL.Exists src v body) om var val
+= (evalWithCtx src om var val)"
+
+fun filterWithBody :: "val \<Rightarrow> var \<Rightarrow> OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val" where
+"filterWithBody (VList Nil) var (exp) om = VList Nil" 
+  | "filterWithBody (VList (Cons val vs)) var exp om = (if (isTrue (evalWithCtx exp om var val)) 
+    then (appendList val (filterWithBody (VList vs) var exp om))   
+    else filterWithBody (VList vs) var exp om)"
 
 fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val" where
 "eval (MyOCL.Int i) om = VList [VInt i]"
@@ -36,5 +59,7 @@ VList [VBool (equalVal (eval e1 om) (eval e2 om))]"
 = VList [VInt (sizeValList (eval exp om))]"
 | "eval (MyOCL.IsEmpty exp) om
 = VList [VBool (isEmptyValList (eval exp om))]"
-
+| "eval (MyOCL.Exists src v body) om
+= VList [VBool (\<not> isEmptyValList (filterWithBody (eval src om) v body om))]"
+                      
 end

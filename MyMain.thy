@@ -74,6 +74,16 @@ lemma "eval (MyOCL.IsEmpty (MyOCL.As self MyOCL.LECTURERS)) (OM ps es)
    apply(simp_all add: lem4 EqualSize_extEnrollment_extCol)
   done  
 
+(* self.lecturers\<rightarrow>exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
+AND lecturers = caller *)
+lemma "eval (MyOCL.Exists (MyOCL.As self MyOCL.LECTURERS) (l) 
+(MyOCL.Eq (MyOCL.Var l) (MyOCL.Var caller))) om
+=
+exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
+(WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
+(MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) om"
+  apply auto
+
 end
 
   

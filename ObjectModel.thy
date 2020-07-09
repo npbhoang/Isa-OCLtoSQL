@@ -43,6 +43,11 @@ fun equalVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 "equalVal (VList (v1#v1s)) (VList (v2#v2s)) = 
 (if (equalVal v1 v2) then (equalVal (VList v1s) (VList v2s)) else False)"
 
+fun andVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
+"andVal (VBool b1) (VBool b2) = (b1 \<and> b2)"
+| "andVal (VList []) (VList []) = True" 
+| "andVal (VList (v1#v1s)) (VList (v2#v2s)) = ((andVal v1 v2) \<and> (andVal (VList v1s) (VList v2s)))"
+
 fun countValList :: "val list \<Rightarrow> int" where 
 "countValList [] = 0" |
 "countValList (v#vs) = 1 + countValList vs"
@@ -58,5 +63,8 @@ fun sizeValList :: "val \<Rightarrow> nat" where
 
 fun isEmptyValList :: "val \<Rightarrow> bool" where
 "isEmptyValList v = (sizeValList v = 0)"
+
+fun isTrue :: "val \<Rightarrow> bool" where
+"isTrue (VList [VBool (True)]) = True"
 
 end
