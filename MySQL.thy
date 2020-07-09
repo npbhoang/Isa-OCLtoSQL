@@ -70,8 +70,8 @@ fun extElement :: "var \<Rightarrow> Person list \<Rightarrow> val" where
     else extElement v ps)"
 
 fun isAssociation :: "var \<Rightarrow> col \<Rightarrow> Enrollment \<Rightarrow> bool" where
-"isAssociation v STUDENTS (E students lecturers) = (students = v)" 
-  | "isAssociation v LECTURERS (E students lecturers) = (lecturers = v)" 
+"isAssociation v STUDENTS e = ((getAssociationEnd STUDENTS e) = v)" 
+  | "isAssociation v LECTURERS e = ((getAssociationEnd LECTURERS e) = v)" 
   | "isAssociation v col _ = False"
 
 fun opposite :: "col \<Rightarrow> col" where
@@ -98,6 +98,7 @@ fun extEnrollment :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Righ
 executes the expression *)
 fun select :: "val \<Rightarrow> exp \<Rightarrow> val list" where
 "select val (MySQL.Int i) = [VInt i]"
+  | "select val (MySQL.Var v) = [VString v]"
   | "select val (Col col) = [proj (Col col) val]"
   | "select val (Eq e1 e2) = [VBool (equalVal (VList (select val e1)) (VList (select val e2)))]"
   | "select val (And e1 e2) = [VBool (andVal (VList (select val e1)) (VList (select val e2)))]"
@@ -112,13 +113,16 @@ fun sucVal :: "val list \<Rightarrow> val list" where
 
 fun selectList :: "val \<Rightarrow> exp \<Rightarrow> val list" where
 "selectList VNULL exp = selectNoCtx exp"
-| "selectList (VList Nil) (Count col) = [VInt 0]"
+(* to be completed if needed: count and countAll is not the same in reality: null case *)
+| "selectList (vs) (Count col) = [VInt (sizeVal vs)]"
+| "selectList (vs) (CountAll) =  [VInt (sizeVal vs)]"
 
-| "selectList (VList Nil) (CountAll) = [VInt 0]"
-| "selectList (VList (v#vs)) (CountAll) = [VInt (Suc (sizeVal (VList (selectList (VList vs) (CountAll)))))]"
 | "selectList (VList Nil) (Eq (CountAll) (MySQL.Int i)) = [VBool (i = 0)]"
 | "selectList (VList (v#vs)) (Eq (CountAll) (MySQL.Int i))
 = [VBool (equalVal (VList [VInt (Suc (sizeVal (VList (selectList (VList vs) (CountAll)))))]) (VList [VInt i]))]"
+| "selectList (VList Nil) (GrtThan (CountAll) (MySQL.Int i)) = [VBool (i > 0)]"
+| "selectList (VList (v#vs)) (GrtThan (CountAll) (MySQL.Int i))
+= [VBool (greaterThanVal (VList [VInt (Suc (sizeVal (VList (selectList (VList vs) (CountAll)))))]) (VList [VInt i]))]"
 | "selectList (VList Nil) (MySQL.Int i) = Nil"
 | "selectList (VList (v#vs)) (MySQL.Int i) = (select v (MySQL.Int i)) @ (selectList (VList vs) (MySQL.Int i))"
 | "selectList (VList Nil) (Col col) = Nil"

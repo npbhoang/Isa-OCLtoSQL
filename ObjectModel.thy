@@ -34,6 +34,10 @@ fun mapPersonListToValList :: "Person list \<Rightarrow> val list" where
 "mapPersonListToValList [] = []" |
 "mapPersonListToValList (p#ps) = (VPerson p)#(mapPersonListToValList ps)"
 
+fun mapEnrollmentToValList :: "Enrollment list \<Rightarrow> val list" where
+"mapEnrollmentToValList [] = []" |
+"mapEnrollmentToValList (e#es) = (VEnrollment e)#(mapEnrollmentToValList es)"
+
 fun equalVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 "equalVal (VInt i1) (VInt i2) = (i1 = i2)" |
 "equalVal (VBool b1) (VBool b2) = (b1 \<longleftrightarrow> b2)" |
@@ -42,6 +46,12 @@ fun equalVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 "equalVal (VList []) (VList []) = True" |
 "equalVal (VList (v1#v1s)) (VList (v2#v2s)) = 
 (if (equalVal v1 v2) then (equalVal (VList v1s) (VList v2s)) else False)"
+
+fun greaterThanVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
+"greaterThanVal (VInt i1) (VInt i2) = (i1 > i2)" |
+"greaterThanVal (VList []) (VList []) = True" |
+"greaterThanVal (VList (v1#v1s)) (VList (v2#v2s)) = 
+(if (greaterThanVal v1 v2) then (greaterThanVal (VList v1s) (VList v2s)) else False)"
 
 fun andVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 "andVal (VBool b1) (VBool b2) = (b1 \<and> b2)"
@@ -54,14 +64,18 @@ fun countValList :: "val list \<Rightarrow> int" where
 
 fun appendList :: "val \<Rightarrow> val \<Rightarrow> val" where
 "appendList VNULL v = v" |
-"appendList v VNULL = VNULL" |
+"appendList v VNULL = VList [v]" |
 "appendList v (VList vs) = VList (v#vs)"
+
+appendList VEnrollment vs = Cons Vernol (VList vs)
+appendList (VList v) vs vs2 = cons (Vlist v) appendList (vs, vs2_)
 
 fun sizeValList :: "val list\<Rightarrow> nat" where
 "sizeValList [] = 0" |
 "sizeValList (x#xs) = Suc (sizeValList xs)"
 
 fun sizeVal :: "val \<Rightarrow> nat" where
+"sizeVal VNULL = 0" |
 "sizeVal (VList []) = 0" |
 "sizeVal (VList (x#xs)) = Suc (sizeVal (VList xs))"
 
