@@ -55,9 +55,15 @@ lemma "eval (MyOCL.Size (MyOCL.As self MyOCL.LECTURERS)) (OM ps es)
    apply auto
   done  
 
+lemma opp_opp: "opposite (opposite col) = col"
+  sorry
+
 lemma EqualSize_extEnrollment_extCol : "sizeValList (VList (extEnrollment var col enrollments)) 
 = sizeValList (VList (extCol var (opposite col) enrollments))"
-  sorry
+  apply(induct enrollments)
+   apply(simp)
+  apply(simp add: opp_opp)
+  done
 
 (* self.lecturers\<rightarrow>isEmpty() \<equiv> SELECT COUNT * = 0 FROM Enrollment WHERE students = self *)
 lemma "eval (MyOCL.IsEmpty (MyOCL.As self MyOCL.LECTURERS)) (OM ps es)
