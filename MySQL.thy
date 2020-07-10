@@ -23,14 +23,6 @@ datatype SQLstm = Select exp
   | SelectFromWhere exp fromItem whereClause 
 and fromItem = Table table 
 
-fun isID :: "col \<Rightarrow> table \<Rightarrow> bool" where
-"isID ID PERSON = True "
-  | "isID _ _ = False"
-
-(* TBC *)
-fun sat :: "val \<Rightarrow> exp \<Rightarrow> bool" where
-"sat v e = True"
-
 fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> string" where
 "getAssociationEnd STUDENTS (E students lecturers) = students"
   | "getAssociationEnd LECTURERS (E students lecturers) = lecturers"
@@ -92,9 +84,6 @@ fun selectNoCtx :: "exp \<Rightarrow> val list" where
 "selectNoCtx (MySQL.Int i) = [VInt i]"
 | "selectNoCtx (MySQL.Var v) = [VString v]"
 | "selectNoCtx (MySQL.Eq e1 e2) = [VBool (equalVal (VList (selectNoCtx e1)) (VList (selectNoCtx e2)))]"
-
-fun sucVal :: "val list \<Rightarrow> val list" where
-"sucVal [VInt i] = [VInt (Suc i)]"
 
 fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 (* to be completed if needed: count and countAll is not the same in reality: null case *)
