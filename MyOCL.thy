@@ -25,10 +25,10 @@ fun transAs :: "MyOCL.as \<Rightarrow> MySQL.col" where
 "transAs MyOCL.LECTURERS = MySQL.LECTURERS"
 
 fun evalWithCtx :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> var \<Rightarrow> val \<Rightarrow> val" where
-"evalWithCtx (MyOCL.Int i) om var val = VList [VInt i]"
-| "evalWithCtx (MyOCL.Var x) om var val = (if (x = var) then (VList[val]) else (VList[VString x]))"
+"evalWithCtx (MyOCL.Int i) om var val = VInt i"
+| "evalWithCtx (MyOCL.Var x) om var val = (if (x = var) then val else (VString x))"
 | "evalWithCtx (MyOCL.Eq e1 e2) om var val = 
-VList [VBool (equalVal (evalWithCtx e1 om var val) (evalWithCtx e2 om var val))]" 
+VBool (equalVal (evalWithCtx e1 om var val) (evalWithCtx e2 om var val))" 
 | "evalWithCtx (MyOCL.Att v att) om var val
 = (if (v=var) then (projList (Col (transAtt att)) val) else (VList [ext v (transAtt att) (getPersonList om)]))"
 | "evalWithCtx (MyOCL.As v as) om var val
@@ -40,26 +40,20 @@ VList [VBool (equalVal (evalWithCtx e1 om var val) (evalWithCtx e2 om var val))]
 | "evalWithCtx (MyOCL.Exists src v body) om var val
 = (evalWithCtx src om var val)"
 
-fun filterWithBody :: "val \<Rightarrow> var \<Rightarrow> OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val" where
-"filterWithBody (VList Nil) var (exp) om = VList Nil" 
-  | "filterWithBody (VList (Cons val vs)) var exp om = (if (isTrue (evalWithCtx exp om var val)) 
-    then (appendList val (filterWithBody (VList vs) var exp om))   
-    else filterWithBody (VList vs) var exp om)"
+fun filterWithBody :: "val list \<Rightarrow> var \<Rightarrow> OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
+"filterWithBody Nil var (exp) om = Nil" 
+| "filterWithBody (Cons val vs) var exp om = (if (isTrueVal (evalWithCtx exp om var val)) 
+    then (val#(filterWithBody vs var exp om))   
+    else filterWithBody vs var exp om)"
 
-fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val" where
-"eval (MyOCL.Int i) om = VList [VInt i]"
-| "eval (MyOCL.Var x) om = VList [VString x]"
-| "eval (MyOCL.Eq e1 e2) om = 
-VList [VBool (equalVal (eval e1 om) (eval e2 om))]" 
-| "eval (MyOCL.Att v att) om 
-= VList [ext v (transAtt att) (getPersonList om)]"
-| "eval (MyOCL.As v as) om 
-= VList (extCol v (transAs as) (getEnrollmentList om))"
-| "eval (MyOCL.Size exp) om 
-= VList [VInt (sizeVal (eval exp om))]"
-| "eval (MyOCL.IsEmpty exp) om
-= VList [VBool (isEmptyVal (eval exp om))]"
-| "eval (MyOCL.Exists src v body) om
-= VList [VBool (\<not> isEmptyVal (filterWithBody (eval src om) v body om))]"
+fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
+"eval (MyOCL.Int i) om = [VInt i]"
+| "eval (MyOCL.Var x) om = [VString x]"
+| "eval (MyOCL.Eq e1 e2) om = [VBool (equalValList (eval e1 om) (eval e2 om))]" 
+| "eval (MyOCL.Att v att) om = [ext v (transAtt att) (getPersonList om)]"
+| "eval (MyOCL.As v as) om = (extCol v (transAs as) (getEnrollmentList om))"
+| "eval (MyOCL.Size exp) om = [VInt (sizeValList (eval exp om))]"
+| "eval (MyOCL.IsEmpty exp) om = [VBool (isEmptyValList (eval exp om))]"
+| "eval (MyOCL.Exists src v body) om = [VBool (\<not> isEmptyValList (filterWithBody (eval src om) v body om))]"
                       
 end

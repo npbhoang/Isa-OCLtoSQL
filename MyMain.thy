@@ -2,17 +2,17 @@ theory MyMain
   imports Main MyOCL MySQL
 begin
 
-lemma lem4 : "filterWhere (TEnrollment om) 
+lemma filterEnrollmentsByAssocEnd : "filterWhere ([TEnrollment om]) 
 (WHERE (MySQL.Eq (Col col) (MySQL.Var var)))
-= VList (extEnrollment var col (getEnrollmentList om))"
+= (extEnrollments var col (getEnrollmentList om))"
   sorry
 
-lemma lem1 : "filterWhere (TPerson om) 
+lemma filterPersonByID : "filterWhere ([TPerson om]) 
 (WHERE (MySQL.Eq (Col MySQL.ID) (MySQL.Var var)))
-= VList [extElement var (getPersonList om)]"
+=  [extElement var (getPersonList om)]"
   sorry
 
-lemma lem2 : "proj (Col col) (extElement v ps) 
+lemma proj_extElement_EQ_ext : "proj (Col col) (extElement v ps) 
 = ext v col ps"
   apply (induct ps)
    apply simp_all
@@ -105,7 +105,7 @@ exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMEN
    apply(simp add:ass1)
   apply auto
   apply (simp add: sizeVal_appendList ass2)
-
+  sorry
 
 end
 
