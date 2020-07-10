@@ -47,17 +47,11 @@ fun projValList :: "exp \<Rightarrow> val list \<Rightarrow> val list" where
 "projValList exp Nil = Nil"
 | "projValList exp (v#vs) = (projVal exp v)#(projValList exp vs)"
 
-fun ext :: "var \<Rightarrow> col \<Rightarrow> Person list \<Rightarrow> val list" where
-"ext v col [] = []"
-| "ext v col (p#ps) = (if (isIdPerson v p) 
-  then (projVal (Col col) (VPerson p))#(ext v col ps)
-  else (ext v col ps))"
-
-fun extPersons :: "var \<Rightarrow> Person list \<Rightarrow> val list" where
-"extPersons v [] = []"
-  | "extPersons v (p#ps) = (if (isIdPerson v p) 
-    then (VPerson p)#(extPersons v ps)
-    else extPersons v ps)"
+fun extPerson :: "var \<Rightarrow> Person list \<Rightarrow> val" where
+"extPerson v [] = VNULL"
+| "extPerson v (p#ps) = (if (isIdPerson v p) 
+    then (VPerson p)
+    else extPerson v ps)"
 
 fun isAssociation :: "var \<Rightarrow> col \<Rightarrow> Enrollment \<Rightarrow> bool" where
 "isAssociation v STUDENTS e = ((getAssociationEnd STUDENTS e) = v)" 
@@ -125,7 +119,7 @@ fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 
 fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" where
 "filterWhere [TPerson om] (WHERE (Eq (Col ID) (Var var)))
-= extPersons var (getPersonList om)"
+= [extPerson var (getPersonList om)]"
 | "filterWhere [TEnrollment om] (WHERE (Eq (Col col) (Var var)))
 = extEnrollments var col (getEnrollmentList om)"
 | "filterWhere Nil (WHERE (Eq e1 e2)) =  Nil"
