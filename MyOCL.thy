@@ -30,9 +30,9 @@ fun evalWithCtx :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> var \<Rightar
 | "evalWithCtx (MyOCL.Eq e1 e2) om var val = 
 VBool (equalVal (evalWithCtx e1 om var val) (evalWithCtx e2 om var val))" 
 | "evalWithCtx (MyOCL.Att v att) om var val
-= (if (v=var) then (projList (Col (transAtt att)) val) else (VList [ext v (transAtt att) (getPersonList om)]))"
+= (if (v=var) then (projVal (Col (transAtt att)) val) else (VList (ext v (transAtt att) (getPersonList om))))"
 | "evalWithCtx (MyOCL.As v as) om var val
-= (if (v=var) then (projList (Col (transAs as)) val) else (VList (extCol v (transAs as) (getEnrollmentList om))))"
+= (if (v=var) then (projVal (Col (transAs as)) val) else (VList (extCol v (transAs as) (getEnrollmentList om))))"
 | "evalWithCtx (MyOCL.Size exp) om var val
 = VList [VInt (sizeVal (evalWithCtx exp om var val))]"
 | "evalWithCtx (MyOCL.IsEmpty exp) om var val
@@ -50,8 +50,8 @@ fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "eval (MyOCL.Int i) om = [VInt i]"
 | "eval (MyOCL.Var x) om = [VString x]"
 | "eval (MyOCL.Eq e1 e2) om = [VBool (equalValList (eval e1 om) (eval e2 om))]" 
-| "eval (MyOCL.Att v att) om = [ext v (transAtt att) (getPersonList om)]"
-| "eval (MyOCL.As v as) om = (extCol v (transAs as) (getEnrollmentList om))"
+| "eval (MyOCL.Att v att) om = ext v (transAtt att) (getPersonList om)"
+| "eval (MyOCL.As v as) om = extCol v (transAs as) (getEnrollmentList om)"
 | "eval (MyOCL.Size exp) om = [VInt (sizeValList (eval exp om))]"
 | "eval (MyOCL.IsEmpty exp) om = [VBool (isEmptyValList (eval exp om))]"
 | "eval (MyOCL.Exists src v body) om = [VBool (\<not> isEmptyValList (filterWithBody (eval src om) v body om))]"

@@ -2,36 +2,37 @@ theory MyMain
   imports Main MyOCL MySQL
 begin
 
-lemma filterEnrollmentsByAssocEnd : "filterWhere ([TEnrollment om]) 
-(WHERE (MySQL.Eq (Col col) (MySQL.Var var)))
-= (extEnrollments var col (getEnrollmentList om))"
-  sorry
-
-lemma filterPersonByID : "filterWhere ([TPerson om]) 
-(WHERE (MySQL.Eq (Col MySQL.ID) (MySQL.Var var)))
-=  [extElement var (getPersonList om)]"
-  sorry
-
-lemma proj_extElement_EQ_ext : "proj (Col col) (extElement v ps) 
-= ext v col ps"
-  apply (induct ps)
-   apply simp_all
-  done
+lemma proj_extPersons_EQ_ext : "projValList (Col col) (extPersons v om) 
+= ext v col om"
+proof (induct om)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a om)
+  then show ?case by simp
+qed
 
 (* self = caller \<equiv> SELECT self = caller *)
 lemma "eval (MyOCL.Eq (MyOCL.Var self) (MyOCL.Var caller)) om 
 = exec (Select (MySQL.Eq (MySQL.Var self) (MySQL.Var caller))) om"
-  apply auto
-  done
+proof -
+  show ?thesis by simp
+qed
+
+value "selectList (extPersons v []) (exp.Eq (Col col.AGE) (exp.Int 30))"
 
 (* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)
-lemma " eval (MyOCL.Eq (MyOCL.Att self MyOCL.AGE) (MyOCL.Int 30)) om
+lemma " eval (MyOCL.Eq (MyOCL.Att self MyOCL.AGE) (MyOCL.Int 30)) (OM ps es)
 = exec (SelectFromWhere (MySQL.Eq (MySQL.Col (MySQL.AGE)) (MySQL.Int 30))
 (Table PERSON)
-(WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) om" 
-  apply (auto)
-   apply (simp_all add: lem1 lem2)
-  done
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) (OM ps es)" 
+  apply auto
+  apply (induct es)
+   apply auto
+  apply(induct self ps rule: extPersons.induct) 
+
+(* "selectList (filterWhere [TPerson om] (WHERE (
+exp.Eq (Col col.ID) (exp.Var self)))) (exp.Eq (Col col.AGE) (exp.Int 30))"*)
 
 (* self.lecturers \<equiv> SELECT lecturers FROM Enrollment WHERE students = self *)
 lemma "eval (MyOCL.As self MyOCL.LECTURERS) (OM ps es)

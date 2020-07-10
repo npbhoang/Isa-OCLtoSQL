@@ -35,29 +35,29 @@ fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> string" whe
 "getAssociationEnd STUDENTS (E students lecturers) = students"
   | "getAssociationEnd LECTURERS (E students lecturers) = lecturers"
 
-fun proj :: "exp \<Rightarrow> val \<Rightarrow> val" where 
-"proj (Col AGE) (VPerson (P pid page pemail)) = VInt page"
-| "proj (Col EMAIL) (VPerson (P pid page pemail)) = VString pemail"
-| "proj (Col ID) (VPerson (P pid page pemail)) = VString pid"
-| "proj (Col STUDENTS) (VEnrollment v) = VString (getAssociationEnd STUDENTS v)" 
-| "proj (Col LECTURERS) (VEnrollment v) = VString (getAssociationEnd LECTURERS v)"
+fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where 
+"projVal exp VNULL = VNULL"
+| "projVal (Col AGE) (VPerson (P pid page pemail)) = VInt page"
+| "projVal (Col EMAIL) (VPerson (P pid page pemail)) = VString pemail"
+| "projVal (Col ID) (VPerson (P pid page pemail)) = VString pid"
+| "projVal (Col STUDENTS) (VEnrollment v) = VString (getAssociationEnd STUDENTS v)" 
+| "projVal (Col LECTURERS) (VEnrollment v) = VString (getAssociationEnd LECTURERS v)"
 
-fun projList :: "exp \<Rightarrow> val \<Rightarrow> val" where
-"projList exp (VList Nil) = (VList Nil)"
-| "projList exp (VList (v#vs)) = appendList (proj exp v) (projList exp (VList vs))"
-| "projList exp val = proj exp val"
+fun projValList :: "exp \<Rightarrow> val list \<Rightarrow> val list" where
+"projValList exp Nil = Nil"
+| "projValList exp (v#vs) = (projVal exp v)#(projValList exp vs)"
 
-fun ext :: "var \<Rightarrow> col \<Rightarrow> Person list \<Rightarrow> val" where
-"ext v col [] = VNULL"
-  | "ext v col (p#ps) = (if (isIdPerson v p) 
-    then (proj (Col col) (VPerson p)) 
-    else (ext v col ps))"
+fun ext :: "var \<Rightarrow> col \<Rightarrow> Person list \<Rightarrow> val list" where
+"ext v col [] = []"
+| "ext v col (p#ps) = (if (isIdPerson v p) 
+  then (projVal (Col col) (VPerson p))#(ext v col ps)
+  else (ext v col ps))"
 
-fun extElement :: "var \<Rightarrow> Person list \<Rightarrow> val" where
-"extElement v [] = VNULL"
-  | "extElement v (p#ps) = (if (isIdPerson v p) 
-    then (VPerson p)
-    else extElement v ps)"
+fun extPersons :: "var \<Rightarrow> Person list \<Rightarrow> val list" where
+"extPersons v [] = []"
+  | "extPersons v (p#ps) = (if (isIdPerson v p) 
+    then (VPerson p)#(extPersons v ps)
+    else extPersons v ps)"
 
 fun isAssociation :: "var \<Rightarrow> col \<Rightarrow> Enrollment \<Rightarrow> bool" where
 "isAssociation v STUDENTS e = ((getAssociationEnd STUDENTS e) = v)" 
@@ -89,7 +89,7 @@ executes the expression *)
 fun select :: "val \<Rightarrow> exp \<Rightarrow> val" where
 "select val (MySQL.Int i) = VInt i"
 | "select val (MySQL.Var v) = VString v"
-| "select val (Col col) = proj (Col col) val"
+| "select val (Col col) = projVal (Col col) val"
 | "select val (Eq e1 e2) = VBool (equalVal (select val e1) (select val e2))"
 | "select val (GrtThan e1 e2) = VBool (greaterThanVal (select val e1) (select val e2))"
 | "select val (And e1 e2) = VBool (andVal (select val e1) (select val e2))"
@@ -114,17 +114,21 @@ fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 | "selectList (v#vs) (MySQL.Int i) = (select v (MySQL.Int i)) # (selectList vs (MySQL.Int i))"
 | "selectList Nil (MySQL.Var var) = Nil"
 | "selectList (v#vs) (MySQL.Var var) = (select v (MySQL.Var var)) # (selectList vs (MySQL.Var var))"
-| "selectList Nil (Eq e1 e2) = [VBool (equalValList (selectList Nil e1) (selectList Nil e2))]"
+| "selectList Nil (Eq e1 e2) = Nil"
 | "selectList (v#vs) (Eq e1 e2) = (select v (Eq e1 e2)) # (selectList vs (Eq e1 e2))"
-| "selectList Nil (GrtThan e1 e2) = [VBool (greaterThanValList (selectList Nil e1) (selectList Nil e2))]"
+| "selectList Nil (GrtThan e1 e2) = Nil"
 | "selectList (v#vs) (GrtThan e1 e2) = (select v (GrtThan e1 e2)) # (selectList vs (GrtThan e1 e2))"
-| "selectList Nil (And e1 e2) = [VBool (andValList (selectList Nil e1) (selectList Nil e2))]"
+| "selectList Nil (And e1 e2) = Nil"
 | "selectList (v#vs) (And e1 e2) = (select v (And e1 e2)) # (selectList vs (And e1 e2))"
 | "selectList Nil (Col col) = Nil"
 | "selectList (v#vs) (Col col) = (select v (Col col)) # (selectList vs (Col col))"
 
 fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" where
-"filterWhere Nil (WHERE (Eq e1 e2)) =  Nil" 
+"filterWhere [TPerson om] (WHERE (Eq (Col ID) (Var var)))
+= extPersons var (getPersonList om)"
+| "filterWhere [TEnrollment om] (WHERE (Eq (Col col) (Var var)))
+= extEnrollments var col (getEnrollmentList om)"
+| "filterWhere Nil (WHERE (Eq e1 e2)) =  Nil"
 | "filterWhere (Cons v vs) (WHERE e) = (if (isTrueVal (select v e))  
     then (v#(filterWhere vs (WHERE e)))   
     else filterWhere vs (WHERE e))"
