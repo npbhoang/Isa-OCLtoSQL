@@ -69,16 +69,6 @@ proof (induct om)
   qed
 qed
 
-(* self.lecturers\<rightarrow>exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
-AND lecturers = caller *)
-lemma "eval (MyOCL.Exists (MyOCL.As self MyOCL.LECTURERS) l 
-(MyOCL.Eq (MyOCL.Var l) (MyOCL.Var caller))) (OM ps es)
-=
-exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
-(WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
-(MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) (OM ps es)"
-  sorry
-
 end
 
   

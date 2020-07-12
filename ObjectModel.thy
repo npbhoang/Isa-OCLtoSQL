@@ -76,11 +76,6 @@ fun countValList :: "val list \<Rightarrow> int" where
 "countValList [] = 0" |
 "countValList (v#vs) = 1 + countValList vs"
 
-fun appendList :: "val \<Rightarrow> val \<Rightarrow> val" where
-"appendList VNULL v = v" |
-"appendList v VNULL = VList [v]" |
-"appendList v (VList vs) = VList (v#vs)"
-
 fun sizeValList :: "val list\<Rightarrow> nat" where
 "sizeValList [] = 0" |
 "sizeValList (x#xs) = Suc (sizeValList xs)"
