@@ -45,11 +45,6 @@ fun extPerson :: "var \<Rightarrow> Person list \<Rightarrow> val" where
     then (VPerson p)
     else extPerson v ps)"
 
-fun isAssociation :: "var \<Rightarrow> col \<Rightarrow> Enrollment \<Rightarrow> bool" where
-"isAssociation v STUDENTS e = ((getAssociationEnd STUDENTS e) = v)" 
-  | "isAssociation v LECTURERS e = ((getAssociationEnd LECTURERS e) = v)" 
-  | "isAssociation v col _ = False"
-
 fun opposite :: "col \<Rightarrow> col" where
 "opposite STUDENTS = LECTURERS"
   | "opposite LECTURERS = STUDENTS"
@@ -58,7 +53,7 @@ fun opposite :: "col \<Rightarrow> col" where
 v stands in the column opposite to col *)
 fun extCol :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
 "extCol v col Nil = Nil" 
-  | "extCol v col (e#es) = (if isAssociation v (opposite col) e 
+  | "extCol v col (e#es) = (if ((getAssociationEnd (opposite col) e) = v)
     then (VString (getAssociationEnd col e))#(extCol v col es)
     else extCol v col es)"
 
@@ -66,7 +61,7 @@ fun extCol :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow>
 v stands in the column col *)
 fun extEnrollments :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
 "extEnrollments v col Nil = Nil" 
-  | "extEnrollments v col (e#es) = (if isAssociation v col e 
+  | "extEnrollments v col (e#es) = (if ((getAssociationEnd col e) = v) 
     then (VEnrollment e)#(extEnrollments v col es) 
     else extEnrollments v col es)"
 
@@ -79,6 +74,12 @@ fun select :: "val \<Rightarrow> exp \<Rightarrow> val" where
 | "select val (Eq e1 e2) = VBool (equalVal (select val e1) (select val e2))"
 | "select val (GrtThan e1 e2) = VBool (greaterThanVal (select val e1) (select val e2))"
 | "select val (And e1 e2) = VBool (andVal (select val e1) (select val e2))"
+
+fun filterEnrollments :: "exp \<Rightarrow> Enrollment list \<Rightarrow> val list" where
+"filterEnrollments exp Nil = Nil"
+| "filterEnrollments exp (e#es) = (if (isTrueVal (select (VEnrollment e) exp)) 
+  then ((VEnrollment e)#(filterEnrollments exp es)) 
+  else (filterEnrollments exp es))"
 
 fun selectNoCtx :: "exp \<Rightarrow> val list" where
 "selectNoCtx (MySQL.Int i) = [VInt i]"
@@ -106,15 +107,21 @@ fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 | "selectList Nil (Col col) = Nil"
 | "selectList (v#vs) (Col col) = (select v (Col col)) # (selectList vs (Col col))"
 
+(* for the time being, this filterWhere only takes 
+either a "table Person" or a "table Enrollment" as an input *)
 fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" where
-"filterWhere [TPerson om] (WHERE (Eq (Col ID) (Var var)))
+"filterWhere Nil (WHERE (Eq e1 e2)) =  Nil"
+| "filterWhere [TPerson om] (WHERE (Eq (Col ID) (Var var)))
 = [extPerson var (getPersonList om)]"
 | "filterWhere [TEnrollment om] (WHERE (Eq (Col col) (Var var)))
 = extEnrollments var col (getEnrollmentList om)"
-| "filterWhere Nil (WHERE (Eq e1 e2)) =  Nil"
+| "filterWhere [TEnrollment om] (WHERE (And e1 e2))
+= filterEnrollments (And e1 e2) (getEnrollmentList om)"
+(*
 | "filterWhere (Cons v vs) (WHERE e) = (if (isTrueVal (select v e))  
     then (v#(filterWhere vs (WHERE e)))   
     else filterWhere vs (WHERE e))"
+*)
 
 fun execFrom :: "fromItem \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "execFrom (Table PERSON) om  = [TPerson om]"

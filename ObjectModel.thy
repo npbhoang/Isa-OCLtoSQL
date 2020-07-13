@@ -44,8 +44,7 @@ where
 "equalValList Nil Nil = True"
 | "equalValList Nil e2 = False"
 | "equalValList e1 Nil = False"
-| "equalValList (e1#e1s) (e2#e2s) = (if (equalVal e1 e2) 
-then (equalValList e1s e2s) else False)"
+| "equalValList (e1#e1s) (e2#e2s) = ((equalVal e1 e2) \<and> (equalValList e1s e2s))"
 | "equalVal (VInt i1) (VInt i2) = (i1 = i2)"
 | "equalVal (VBool b1) (VBool b2) = (b1 \<longleftrightarrow> b2)" 
 | "equalVal (VString s1) (VString s2) = (s1 = s2)" 
@@ -95,6 +94,7 @@ fun isTrueValList :: "val list\<Rightarrow> bool" where
 
 fun isTrueVal :: "val \<Rightarrow> bool" where
 "isTrueVal (VBool True) = True"
+| "isTrueVal (VBool False) = False"
 | "isTrueVal (VList vs) = isTrueValList vs"
 
 end

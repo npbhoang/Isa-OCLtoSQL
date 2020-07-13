@@ -69,6 +69,29 @@ proof (induct om)
   qed
 qed
 
+(* self.lecturers→exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
+AND lecturers = caller *)
+lemma "eval (MyOCL.Exists (MyOCL.As self MyOCL.LECTURERS) l 
+(MyOCL.Eq (MyOCL.Var l) (MyOCL.Var caller))) (OM ps es)
+=
+exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
+(WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
+(MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) (OM ps es)"
+proof (induct es)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a list)
+  then show ?case
+  proof (cases "getAssociationEnd col.STUDENTS a = self")
+    case True
+    then show ?thesis sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed
+qed
+
 end
 
   
