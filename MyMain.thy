@@ -69,12 +69,28 @@ proof (induct om)
   qed
 qed
 
+lemma lem1: assumes "(0 < sizeValList (filterWithBody
+(extCol self col.LECTURERS list) l
+       (OCLexp.Eq (OCLexp.Var l) (OCLexp.Var caller)) (OM ps list)))"
+  shows "(0 < sizeValList (filterWithBody
+(extCol self col.LECTURERS list) l
+       (OCLexp.Eq (OCLexp.Var l) (OCLexp.Var caller)) (OM ps (a#list))))"
+  sorry
+
+lemma lem2: "(0 < sizeValList (filterWithBody
+(extCol self col.LECTURERS list) l
+       (OCLexp.Eq (OCLexp.Var l) (OCLexp.Var caller)) (OM ps list))) =
+  (0 < sizeValList (filterWithBody
+(extCol self col.LECTURERS list) l
+       (OCLexp.Eq (OCLexp.Var l) (OCLexp.Var caller)) (OM ps (a#list))))"
+  sorry
+
 (* self.lecturers→exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
 AND lecturers = caller *)
-lemma "eval (MyOCL.Exists (MyOCL.As self MyOCL.LECTURERS) l 
+lemma assumes differentVars: "self \<noteq> caller \<and> self \<noteq> l \<and> caller \<noteq> l"
+  shows "eval (MyOCL.Exists (MyOCL.As self MyOCL.LECTURERS) l 
 (MyOCL.Eq (MyOCL.Var l) (MyOCL.Var caller))) (OM ps es)
-=
-exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
+= exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
 (WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
 (MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) (OM ps es)"
 proof (induct es)
@@ -82,13 +98,31 @@ proof (induct es)
   then show ?case by simp
 next
   case (Cons a list)
+  from this have induction_hypothesis: "(0 < sizeValList (filterWithBody (extCol self col.LECTURERS list) l
+       (OCLexp.Eq (OCLexp.Var l) (OCLexp.Var caller)) (OM ps list))) = 
+        (0 < sizeValList (filterEnrollments
+           (And (exp.Eq (exp.Var self) (Col col.STUDENTS))
+             (exp.Eq (exp.Var caller) (Col col.LECTURERS)))
+           list))" by simp
   then show ?case
   proof (cases "getAssociationEnd col.STUDENTS a = self")
     case True
-    then show ?thesis sorry
+    assume a_STUDENTS_is_self: "getAssociationEnd col.STUDENTS a = self"
+    show ?thesis
+    proof (cases "getAssociationEnd col.LECTURERS a = caller")
+    case True
+      then show ?thesis using a_STUDENTS_is_self by simp
+    next
+      case False
+      then show ?thesis
+        apply (simp add: a_STUDENTS_is_self)
+        apply (simp add: differentVars)
+        sorry
+    qed
   next
     case False
-    then show ?thesis sorry
+    then show ?thesis
+      sorry
   qed
 qed
 
