@@ -59,19 +59,22 @@ fun extCol :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow>
 
 (* extEnrollment returns VList of enrollments such that
 v stands in the column col *)
+
 fun extEnrollments :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
 "extEnrollments v col Nil = Nil" 
   | "extEnrollments v col (e#es) = (if ((getAssociationEnd col e) = v) 
     then (VEnrollment e)#(extEnrollments v col es) 
     else extEnrollments v col es)"
 
+
 (* select takes a list of val [context] and for element
 executes the expression *)
 fun select :: "val \<Rightarrow> exp \<Rightarrow> val" where
 "select val (MySQL.Int i) = VInt i"
-| "select val (MySQL.Var v) = VString v"
+(*| "select val (MySQL.Var v) = VString v"*)
 | "select val (Col col) = projVal (Col col) val"
-| "select val (Eq e1 e2) = VBool (equalVal (select val e1) (select val e2))"
+(*| "select val (Eq e1 e2) = VBool (equalVal (select val e1) (select val e2))"*)
+
 | "select val (GrtThan e1 e2) = VBool (greaterThanVal (select val e1) (select val e2))"
 | "select val (And e1 e2) = VBool (andVal (select val e1) (select val e2))"
 

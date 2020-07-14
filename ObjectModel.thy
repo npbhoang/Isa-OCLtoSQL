@@ -95,6 +95,6 @@ fun isTrueValList :: "val list\<Rightarrow> bool" where
 fun isTrueVal :: "val \<Rightarrow> bool" where
 "isTrueVal (VBool True) = True"
 | "isTrueVal (VBool False) = False"
-| "isTrueVal (VList vs) = isTrueValList vs"
+(*| "isTrueVal (VList vs) = isTrueValList vs"*)
 
 end
