@@ -37,11 +37,9 @@ fun evalWithCtx :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> OCLexp \<Righ
 | "evalWithCtx (MyOCL.Eq e1 e2) om var val = 
 VBool (equalVal (evalWithCtx e1 om var val) (evalWithCtx e2 om var val))" 
 | "evalWithCtx (MyOCL.Att (Var v) att) om (MyOCL.IVar i) val
-= (if (v=i) then (projVal (Col (transAtt att)) val) 
-else (VList (projValList (Col (transAtt att)) [extPerson v (getPersonList om)])))"
+= projVal (Col (transAtt att)) (VObj v)"
 | "evalWithCtx (MyOCL.As (Var v) as) om (MyOCL.IVar i) val
-= (if (v=i) then (projVal (Col (transAs as)) val) 
-else (VList (extCol (MySQL.Var v) (transAs as) (getEnrollmentList om))))"
+= VList (extCol (MySQL.Var v) (transAs as) (getEnrollmentList om))"
 | "evalWithCtx (MyOCL.Size exp) om var val
 = VList [VInt (sizeVal (evalWithCtx exp om var val))]"
 | "evalWithCtx (MyOCL.IsEmpty exp) om var val

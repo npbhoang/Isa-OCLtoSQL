@@ -39,38 +39,34 @@ fun mapEnrollmentToValList :: "Enrollment list \<Rightarrow> val list" where
 "mapEnrollmentToValList [] = []" |
 "mapEnrollmentToValList (e#es) = (VEnrollment e)#(mapEnrollmentToValList es)"
 
-fun equalVal :: "val \<Rightarrow> val \<Rightarrow> bool"
-and equalValList :: "val list \<Rightarrow> val list \<Rightarrow> bool"
+fun equalVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
+"equalVal v1 v2 = (v1 = v2)"
+
+fun equalValList :: "val list \<Rightarrow> val list \<Rightarrow> bool"
 where
 "equalValList Nil Nil = True"
 | "equalValList Nil e2 = False"
 | "equalValList e1 Nil = False"
 | "equalValList (e1#e1s) (e2#e2s) = ((equalVal e1 e2) \<and> (equalValList e1s e2s))"
-| "equalVal v1 v2 = (v1 = v2)"
-(*| "equalVal (VInt i1) (VInt i2) = (i1 = i2)"
-| "equalVal (VBool b1) (VBool b2) = (b1 \<longleftrightarrow> b2)" 
-| "equalVal (VObj o1) v2 = ((VObj o1) = v2)"
-| "equalVal v1 (VObj o2) = ((VObj o2) = v1)"
-| "equalVal (VString s1) (VString s2) = (s1 = s2)" 
-| "equalVal (VPerson p1) (VPerson p2) = (p1 = p2)" 
-| "equalVal (VList v1s) (VList v2s) = equalValList v1s v2s"*)
 
-fun greaterThanVal :: "val \<Rightarrow> val \<Rightarrow> bool" 
-and greaterThanValList :: "val list \<Rightarrow> val list \<Rightarrow> bool"
+fun greaterThanVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
+ "greaterThanVal (VInt i1) (VInt i2) = (i1 > i2)" 
+
+fun greaterThanValList :: "val list \<Rightarrow> val list \<Rightarrow> bool"
 where
 "greaterThanValList Nil Nil = False"
 | "greaterThanValList Nil e2 = False"
 | "greaterThanValList e1 Nil = False"
-| "greaterThanValList (e1#e1s) (e2#e2s) = (if (greaterThanVal e1 e2) 
+| "greaterThanValList (e1#e1s) (e2#e2s) = 
+(if (greaterThanVal e1 e2) 
 then (greaterThanValList e1s e2s) else False)"
-| "greaterThanVal (VInt i1) (VInt i2) = (i1 > i2)" 
-| "greaterThanVal (VList e1s) (VList e2s) = greaterThanValList e1s e2s"
 
-fun andVal :: "val \<Rightarrow> val \<Rightarrow> bool"
-and andValList :: "val list \<Rightarrow> val list \<Rightarrow> bool" where
+
+fun andVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 "andVal (VBool b1) (VBool b2) = (b1 \<and> b2)"
-| "andVal (VList v1s) (VList v2s) = andValList v1s v2s"
-| "andValList Nil Nil = False"
+
+fun andValList :: "val list \<Rightarrow> val list \<Rightarrow> bool" where
+"andValList Nil Nil = False"
 | "andValList Nil v2s = False"
 | "andValList e1s Nil = False"
 | "andValList (e1#e1s) (e2#e2s) = ((andVal e1 e2) \<and> (andValList e1s e2s))"
@@ -88,17 +84,17 @@ fun sizeVal :: "val \<Rightarrow> nat" where
 "sizeVal (VList vs) = sizeValList vs"
 
 fun isEmptyValList :: "val list \<Rightarrow> bool" where
-"isEmptyValList v = (sizeValList v = 0)"
+"isEmptyValList [] = True"
+| "isEmptyValList (a#ls) = False"
 
 fun isEmptyVal :: "val \<Rightarrow> bool" where
-"isEmptyVal (VList vs) = isEmptyValList vs"
+"isEmptyVal (VList []) = True"
+| "isEmptyVal (VList (a#ls)) = False"
 
-fun isTrueValList :: "val list\<Rightarrow> bool" where
-"isTrueValList [VBool True] = True"
 
 fun isTrueVal :: "val \<Rightarrow> bool" where
 "isTrueVal (VBool True) = True"
 | "isTrueVal (VBool False) = False"
-(*| "isTrueVal (VList vs) = isTrueValList vs"*)
+
 
 end

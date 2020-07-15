@@ -71,10 +71,17 @@ proof (induct om)
 qed
 
 
-lemma [simp] : "filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps (a # list))
-= filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps list)"
-  sorry
+lemma [simp] : "filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps (a # es))
+= filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps es)"
+  
 
+ proof (induct vallist)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a list)
+  then show ?case by auto
+qed
 
 lemma [simp]: "isTrueVal (VBool (e1 ∧ e2)) = (e1 \<and> e2)" 
 proof (cases "e1")
@@ -93,6 +100,8 @@ next
   then show ?thesis by simp
 qed
 
+
+
 (* self.lecturers→exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
 AND lecturers = caller *)
 lemma  "eval (MyOCL.Exists (MyOCL.As (Var self) MyOCL.LECTURERS) (MyOCL.IVar l) 
@@ -101,13 +110,14 @@ lemma  "eval (MyOCL.Exists (MyOCL.As (Var self) MyOCL.LECTURERS) (MyOCL.IVar l)
 (WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
 (MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) (OM ps es)"
 
-proof (induct es)
+
+ proof (induct es)
   case Nil
   then show ?case by simp
 next
   case (Cons a list)
-  then show ?case by auto
-
+  then show ?case 
+    by auto
  
 qed
 
