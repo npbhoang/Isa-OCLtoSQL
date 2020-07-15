@@ -23,17 +23,17 @@ datatype SQLstm = Select exp
   | SelectFromWhere exp fromItem whereClause 
 and fromItem = Table table 
 
-fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> string" where
-"getAssociationEnd STUDENTS (E students lecturers) = students"
-  | "getAssociationEnd LECTURERS (E students lecturers) = lecturers"
+fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> val" where
+"getAssociationEnd STUDENTS (E students lecturers) = (VString students)"
+  | "getAssociationEnd LECTURERS (E students lecturers) = (VString lecturers)"
 
 fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where 
 "projVal exp VNULL = VNULL"
 | "projVal (Col AGE) (VPerson (P pid page pemail)) = VInt page"
 | "projVal (Col EMAIL) (VPerson (P pid page pemail)) = VString pemail"
 | "projVal (Col ID) (VPerson (P pid page pemail)) = VString pid"
-| "projVal (Col STUDENTS) (VEnrollment v) = VString (getAssociationEnd STUDENTS v)" 
-| "projVal (Col LECTURERS) (VEnrollment v) = VString (getAssociationEnd LECTURERS v)"
+| "projVal (Col STUDENTS) (VEnrollment v) = getAssociationEnd STUDENTS v" 
+| "projVal (Col LECTURERS) (VEnrollment v) = getAssociationEnd LECTURERS v"
 
 fun projValList :: "exp \<Rightarrow> val list \<Rightarrow> val list" where
 "projValList exp Nil = Nil"
@@ -52,12 +52,12 @@ fun opposite :: "col \<Rightarrow> col" where
 (* extEnrollment returns VList of enrollments such that
 v stands in the column col *)
 
-fun extEnrollments :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
-"extEnrollments v col Nil = Nil" 
-  (*| "extEnrollments v col (e#es) = (if ((getAssociationEnd col e) = v) 
-    then (VEnrollment e)#(extEnrollments v col es) 
-    else extEnrollments v col es)"
-*)
+fun extEnrollments :: "exp \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
+"extEnrollments (Var v) col Nil = Nil" 
+| "extEnrollments (Var v) col (e#es) = (if ((getAssociationEnd col e) = (VObj v)) 
+    then (VEnrollment e)#(extEnrollments (Var v) col es) 
+    else extEnrollments (Var v) col es)"
+
 
 (* select takes a list of val [context] and for element
 executes the expression *)
@@ -87,7 +87,7 @@ fun extCol :: "exp \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow>
 "extCol (Var v) col Nil = Nil" 
 
 | "extCol (Var v) col (e#es) = (if (isTrueVal (select (VEnrollment e) (Eq (Var v) (Col (opposite col))))) 
-then ((VString (getAssociationEnd col e))#(extCol (Var v) col es)) 
+then (((getAssociationEnd col e))#(extCol (Var v) col es)) 
 else (extCol (Var v) col es))"
 
 (*  | "extCol v col (e#es) = (if ((getAssociationEnd (opposite col) e) = v)
@@ -121,9 +121,9 @@ either a "table Person" or a "table Enrollment" as an input *)
 fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" where
 "filterWhere Nil (WHERE (Eq e1 e2)) =  Nil"
 | "filterWhere [TPerson om] (WHERE (Eq (Col ID) (Var var)))
-= [extPerson var (getPersonList om)]"
+= [VObj var]"
 | "filterWhere [TEnrollment om] (WHERE (Eq (Col col) (Var var)))
-= extEnrollments var col (getEnrollmentList om)"
+= extEnrollments (Var var) col (getEnrollmentList om)"
 | "filterWhere [TEnrollment om] (WHERE (And e1 e2))
 = filterEnrollments (And e1 e2) (getEnrollmentList om)"
 (*
