@@ -15,6 +15,7 @@ datatype val =  VNULL | VInt nat | VString string | VBool bool
   | VList "val list"
   | TPerson Objectmodel
   | TEnrollment Objectmodel
+  | VObj string
 
 fun isIdPerson :: "string \<Rightarrow> Person \<Rightarrow> bool" where
 "isIdPerson v (P pid page pemail) = (v = pid)" |
@@ -47,6 +48,7 @@ where
 | "equalValList (e1#e1s) (e2#e2s) = ((equalVal e1 e2) \<and> (equalValList e1s e2s))"
 | "equalVal (VInt i1) (VInt i2) = (i1 = i2)"
 | "equalVal (VBool b1) (VBool b2) = (b1 \<longleftrightarrow> b2)" 
+| "equalVal (VObj o1) v2 = ((VObj o1) = v2)"
 | "equalVal (VString s1) (VString s2) = (s1 = s2)" 
 | "equalVal (VPerson p1) (VPerson p2) = (p1 = p2)" 
 | "equalVal (VList v1s) (VList v2s) = equalValList v1s v2s"

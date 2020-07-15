@@ -49,32 +49,23 @@ fun opposite :: "col \<Rightarrow> col" where
 "opposite STUDENTS = LECTURERS"
   | "opposite LECTURERS = STUDENTS"
 
-(* extCol returns VList of elements standing in column col such that
-v stands in the column opposite to col *)
-fun extCol :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
-"extCol v col Nil = Nil" 
-  | "extCol v col (e#es) = (if ((getAssociationEnd (opposite col) e) = v)
-    then (VString (getAssociationEnd col e))#(extCol v col es)
-    else extCol v col es)"
-
 (* extEnrollment returns VList of enrollments such that
 v stands in the column col *)
 
 fun extEnrollments :: "var \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
 "extEnrollments v col Nil = Nil" 
-  | "extEnrollments v col (e#es) = (if ((getAssociationEnd col e) = v) 
+  (*| "extEnrollments v col (e#es) = (if ((getAssociationEnd col e) = v) 
     then (VEnrollment e)#(extEnrollments v col es) 
     else extEnrollments v col es)"
-
+*)
 
 (* select takes a list of val [context] and for element
 executes the expression *)
 fun select :: "val \<Rightarrow> exp \<Rightarrow> val" where
 "select val (MySQL.Int i) = VInt i"
-(*| "select val (MySQL.Var v) = VString v"*)
+| "select val (MySQL.Var v) = VObj v"
 | "select val (Col col) = projVal (Col col) val"
-(*| "select val (Eq e1 e2) = VBool (equalVal (select val e1) (select val e2))"*)
-
+| "select val (Eq e1 e2) = VBool (equalVal (select val e1) (select val e2))"
 | "select val (GrtThan e1 e2) = VBool (greaterThanVal (select val e1) (select val e2))"
 | "select val (And e1 e2) = VBool (andVal (select val e1) (select val e2))"
 
@@ -86,8 +77,23 @@ fun filterEnrollments :: "exp \<Rightarrow> Enrollment list \<Rightarrow> val li
 
 fun selectNoCtx :: "exp \<Rightarrow> val list" where
 "selectNoCtx (MySQL.Int i) = [VInt i]"
-| "selectNoCtx (MySQL.Var v) = [VString v]"
+| "selectNoCtx (MySQL.Var v) = [VObj v]"
 | "selectNoCtx (MySQL.Eq e1 e2) = [VBool (equalVal (VList (selectNoCtx e1)) (VList (selectNoCtx e2)))]"
+
+
+(* extCol returns VList of elements standing in column col such that
+v stands in the column opposite to col *)
+fun extCol :: "exp \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
+"extCol (Var v) col Nil = Nil" 
+
+| "extCol (Var v) col (e#es) = (if (isTrueVal (select (VEnrollment e) (Eq (Var v) (Col (opposite col))))) 
+then ((VString (getAssociationEnd col e))#(extCol (Var v) col es)) 
+else (extCol (Var v) col es))"
+
+(*  | "extCol v col (e#es) = (if ((getAssociationEnd (opposite col) e) = v)
+    then (VString (getAssociationEnd col e))#(extCol v col es)
+    else extCol v col es)"
+*)
 
 fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 (* to be completed if needed: count and countAll is not the same in reality: null case *)

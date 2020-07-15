@@ -75,24 +75,20 @@ lemma hide0: "filterWithBody vallist var (OCLexp.Eq e1 e1) om = vallist"
 lemma hide1: "v1 \<noteq> v2 \<Longrightarrow> filterWithBody vallist var (OCLexp.Eq (Var v1) (Var v2)) om = []"
   sorry
 
-lemma hide3 : "sizeValList (filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps (a # list)))
-= sizeValList (filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps list))"
+lemma [simp] : "filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps (a # list))
+= filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps list)"
   sorry
 
+(* TO BE CLARIFIED *)
 lemma lem1: "eval (MyOCL.As (Var v) as) (OM ps []) = []"
   sorry
 
-
-lemma [simp]: "isTrueVal (select (VEnrollment a) (exp.Eq (exp.Var self) (Col col.STUDENTS)))
-\<Longrightarrow> 
-(eval (As (OCLexp.Var self) as.LECTURERS) om) 
-= (VEnrollment a)#(eval (As (OCLexp.Var self) as.LECTURERS) (OM ps (a#list)))"
+(* NOT CORRECT YET *)
+lemma hide7 : "extCol (exp.Var v) l (a # list) = extCol (exp.Var v) l list"
   sorry
 
-lemma [simp]: "isTrueVal (select (VEnrollment a) (exp.Eq (exp.Var caller) (Col col.LECTURERS)))
-\<Longrightarrow> 
-(filterWithBody ((VEnrollment a)#ls) (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var caller)) (OM ps (a#list)) 
-= (VEnrollment a)#(filterWithBody ls (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var caller)) (OM ps (a#list))))"
+(* TO BE PROVED *)
+lemma [simp]: "isTrueVal (VBool (andVal e1 e2)) = ((isTrueVal e1) ∧ (isTrueVal e2))" 
   sorry
 
 (* self.lecturers→exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
@@ -108,13 +104,9 @@ proof (induct es)
   then show ?case using lem1 by simp
 next
   case (Cons a list)
-  then show ?case
-    apply auto
+  then show ?case by auto
 
-    
-  
-
-
+ 
 qed
 
 end
