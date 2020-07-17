@@ -41,7 +41,7 @@ fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where
 "projVal exp VNULL = VNULL"
 | "projVal (Col AGE) (VPerson (P pid page pemail)) = VInt page"
 | "projVal (Col EMAIL) (VPerson (P pid page pemail)) = VString pemail"
-| "projVal (Col ID) (VPerson (P pid page pemail)) = VString pid"
+| "projVal (Col ID) (p) = (p)"
 | "projVal (Col STUDENTS) (VEnrollment v) = getAssociationEnd STUDENTS v" 
 | "projVal (Col LECTURERS) (VEnrollment v) = getAssociationEnd LECTURERS v"
 
@@ -74,6 +74,16 @@ fun filterEnrollments :: "exp \<Rightarrow> Enrollment list \<Rightarrow> val li
 | "filterEnrollments exp (e#es) = (if (isTrueVal (select (VEnrollment e) exp)) 
   then ((VEnrollment e)#(filterEnrollments exp es)) 
   else (filterEnrollments exp es))"
+
+(* filterPersons: given an expression and a person list,
+it filters out the person list based on the result of the expression
+for each person *)
+
+fun filterPersons :: "exp \<Rightarrow> Person list \<Rightarrow> val list" where
+"filterPersons exp Nil = Nil"
+| "filterPersons exp (p#ps) = (if (isTrueVal (select (VPerson p) exp)) 
+  then ((VPerson p)#(filterPersons exp ps)) 
+  else (filterPersons exp ps))"
 
 (*
 fun selectNoCtx :: "exp \<Rightarrow> val list" where
@@ -143,12 +153,15 @@ the where-clause
 *)
 fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" where
 "filterWhere Nil (WHERE (Eq e1 e2)) =  Nil"
-| "filterWhere [TPerson om] (WHERE (Eq (Col ID) (Var var)))
-= [VObj var]"
+(*| "filterWhere [TPerson (OM ps es)] (WHERE (Eq (Col ID) (Var var)))
+= [VObj var]"*)
+| "filterWhere [TPerson (OM ps es)] (WHERE exp)
+= filterPersons exp ps"
 | "filterWhere [TEnrollment (OM ps es)] (WHERE (Eq (Col col) (Var var)))
 = extEnrollments (Var var) col es"
-| "filterWhere [TEnrollment  (OM ps es)] (WHERE (And e1 e2))
+| "filterWhere [TEnrollment (OM ps es)] (WHERE (And e1 e2))
 = filterEnrollments (And e1 e2) es"
+
 (* This is to be discussed, completed later, when dealing with Subselect
 | "filterWhere (Cons v vs) (WHERE e) = (if (isTrueVal (select v e))  
     then (v#(filterWhere vs (WHERE e)))   

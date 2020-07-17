@@ -19,6 +19,7 @@ datatype OCLexp = Int nat
   | IsEmpty OCLexp
   | Exists OCLexp OCLexp OCLexp
   | PE OCLexp Objectmodel
+  | AllInstances table
 
 fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 "transAtt MyOCL.AGE = MySQL.AGE" |
@@ -85,4 +86,5 @@ fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 | "eval (MyOCL.Size exp) om = [VInt (sizeValList (eval exp om))]"
 | "eval (MyOCL.IsEmpty exp) om = [VBool (isEmptyValList (eval exp om))]"
 | "eval (MyOCL.Exists src v body) om = [VBool (\<not> isEmptyValList (filterWithBody (eval src om) v (partialEval body om)))]"
+| "eval (MyOCL.AllInstances PERSON) om = mapPersonListToValList (getPersonList om)"
 end

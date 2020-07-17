@@ -70,20 +70,6 @@ proof (induct om)
   qed
 qed
 
-(*
-lemma hide0 : "filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps (a # es))
-= filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps es)"
-  
-
- proof (induct vallist)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a list)
-  then show ?case by auto
-qed
-*)
-
 lemma [simp]: "isTrueVal (VBool (e1 ∧ e2)) = (e1 \<and> e2)" 
 proof (cases "e1")
   case True
@@ -110,8 +96,6 @@ lemma  "eval (MyOCL.Exists (MyOCL.As (Var self) MyOCL.LECTURERS) (MyOCL.IVar l)
 = exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
 (WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
 (MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) (OM ps es)"
-
-
  proof (induct es)
   case Nil
   then show ?case by simp
@@ -119,7 +103,26 @@ next
   case (Cons a list)
   then show ?case 
     by auto
- 
+qed
+
+(* Person.allInstances() \<equiv> SELECT Person_id FROM Person *)
+lemma "eval (MyOCL.AllInstances PERSON) (OM ps es)
+= exec (SelectFrom (MySQL.Col MySQL.ID) (Table PERSON)) (OM ps es)"
+  apply auto
+  done
+
+(* Person.allInstances()\<rightarrow>exists(p|p.age = 30) 
+\<equiv> SELECT COUNT * > 0 FROM Person WHERE age = 30*)
+lemma "eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (IVar p) (MyOCL.Eq (MyOCL.Att (MyOCL.IVar p) (MyOCL.AGE)) (MyOCL.Int 30))) (OM ps es)
+= exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table PERSON) 
+(WHERE (MySQL.Eq (Col col.AGE) (MySQL.Int 30))))) (OM ps es)"
+proof (cases ps)
+case Nil
+  then show ?thesis by auto
+next
+case (Cons a list)
+  then show ?thesis 
+    apply auto
 qed
 
 end
