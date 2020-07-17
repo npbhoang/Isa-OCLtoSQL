@@ -70,8 +70,8 @@ proof (induct om)
   qed
 qed
 
-
-lemma [simp] : "filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps (a # es))
+(*
+lemma hide0 : "filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps (a # es))
 = filterWithBody vallist (IVar l) (OCLexp.Eq (IVar l) (OCLexp.Var v2)) (OM ps es)"
   
 
@@ -82,6 +82,7 @@ next
   case (Cons a list)
   then show ?case by auto
 qed
+*)
 
 lemma [simp]: "isTrueVal (VBool (e1 ∧ e2)) = (e1 \<and> e2)" 
 proof (cases "e1")

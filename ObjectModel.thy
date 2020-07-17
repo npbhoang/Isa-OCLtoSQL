@@ -16,6 +16,7 @@ datatype val =  VNULL | VInt nat | VString string | VBool bool
   | TPerson Objectmodel
   | TEnrollment Objectmodel
   | VObj string
+  | VIVar string
 
 fun isIdPerson :: "string \<Rightarrow> Person \<Rightarrow> bool" where
 "isIdPerson v (P pid page pemail) = (v = pid)" |
