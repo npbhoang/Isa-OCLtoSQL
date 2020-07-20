@@ -87,4 +87,9 @@ fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 | "eval (MyOCL.IsEmpty exp) om = [VBool (isEmptyValList (eval exp om))]"
 | "eval (MyOCL.Exists src v body) om = [VBool (\<not> isEmptyValList (filterWithBody (eval src om) v (partialEval body om)))]"
 | "eval (MyOCL.AllInstances PERSON) om = mapPersonListToValList (getPersonList om)"
+
+fun translate :: "OCLexp \<Rightarrow> MySQL.exp" where
+"translate (MyOCL.Int i) = MySQL.Int i" |
+"translate (Att (IVar p) att) = MySQL.Col (transAtt att)"
+
 end

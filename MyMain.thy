@@ -6,16 +6,18 @@ begin
 lemma "eval (MyOCL.Eq (MyOCL.Var self) (MyOCL.Var caller)) om 
 = exec (Select (MySQL.Eq (MySQL.Var self) (MySQL.Var caller))) om"
 proof -
-  show ?thesis by simp
-qed
+  show ?thesis by simp      
+qed     
 
 (* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)
+(*
 lemma "eval (MyOCL.Eq (MyOCL.Att (MyOCL.Var self) MyOCL.AGE) (MyOCL.Int 30)) om
 = exec (SelectFromWhere (MySQL.Eq (MySQL.Col (MySQL.AGE)) (MySQL.Int 30))
 (Table PERSON)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) om" 
   apply auto
-  done
+  done        
+*)
 
 (* self.lecturers \<equiv> SELECT lecturers FROM Enrollment WHERE students = self *)
 lemma "eval (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS) om
@@ -106,12 +108,25 @@ next
 qed
 
 (* Person.allInstances() \<equiv> SELECT Person_id FROM Person *)
+(*
 lemma "eval (MyOCL.AllInstances PERSON) (OM ps es)
 = exec (SelectFrom (MySQL.Col MySQL.ID) (Table PERSON)) (OM ps es)"
   apply auto
-  done
+  sorry
+*)
 
-(* Person.allInstances()\<rightarrow>exists(p|p.age = 30) 
+lemma [simp]:  "filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq (PE (Att (IVar p) att.AGE) (OM (a # list) es)) (OCLexp.Int 30))
+= filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq (Att (IVar p) att.AGE) (OCLexp.Int 30))"
+sorry
+
+lemma [simp]: "translate oclexp1 = sqlexp1 \<and>
+translate oclexp2 = sqlexp2 \<Longrightarrow>
+filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq oclexp1 oclexp2)
+= filterPersons (exp.Eq sqlexp1 sqlexp2) list"
+sorry
+
+
+(* Person.allInstances() \<rightarrow> exists(p|p.age = 30) 
 \<equiv> SELECT COUNT * > 0 FROM Person WHERE age = 30*)
 lemma "eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (IVar p) (MyOCL.Eq (MyOCL.Att (MyOCL.IVar p) (MyOCL.AGE)) (MyOCL.Int 30))) (OM ps es)
 = exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table PERSON) 
@@ -121,8 +136,7 @@ case Nil
   then show ?thesis by auto
 next
 case (Cons a list)
-  then show ?thesis 
-    apply auto
+  then show ?thesis by auto
 qed
 
 end

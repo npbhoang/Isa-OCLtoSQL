@@ -85,8 +85,10 @@ fun sizeVal :: "val \<Rightarrow> nat" where
 "sizeVal (VList vs) = sizeValList vs"
 
 fun isEmptyValList :: "val list \<Rightarrow> bool" where
-"isEmptyValList [] = True"
+"isEmptyValList xs = ((sizeValList xs) = 0)"
+(*"isEmptyValList [] = True"
 | "isEmptyValList (a#ls) = False"
+*)
 
 fun isEmptyVal :: "val \<Rightarrow> bool" where
 "isEmptyVal (VList []) = True"
