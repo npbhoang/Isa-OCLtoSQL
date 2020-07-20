@@ -13,7 +13,7 @@ Please note that this is an on-going project.
 
 ### The context
 In this version, we assume the following contextual model:
-- The model has 1 table Person with 2 attributes: age of type int and email of type string. Then, the datatype Person has 2 constructors, the first one takes three arguments of attributes - representing an actual Person object while the second one takes no argument - representing an invalid Person.
+- The model has a table Person with two attributes: age of type int and email of type string. Then, the datatype Person has two constructors, the first one takes three arguments of attributes - representing an actual Person object while the second one takes no argument - representing an invalid Person.
 ```ocaml
 (* Person (Person_id, age, string) *) 
 datatype Person = P string nat string | PNULL
@@ -27,6 +27,70 @@ datatype Enrollment = E string string
 - Finally, the contextual instance model, also knows as Object model, including a list of Persons and a list of Enrollments. It is important to note that OCL and SQL in our case share the same contextual model.
 ```ocaml
 datatype Objectmodel = OM "Person list" "Enrollment list"
+```
+
+### The SQL-select statement
+An SQL-select statement is of the form:
+```ocaml
+datatype SQLstm = Select exp (* SELECT-expression without context *)
+  | SelectFrom exp fromItem (* SELECT-expression with a FROM-clause *)
+  | SelectFromWhere exp fromItem whereClause (* SELECT-expression with a FROM-clause and a WHERE-clause *)
+datatype whereClause = WHERE exp
+datatype fromItem = Table table
+datatype table = PERSON | ENROLLMENT
+```
+where exp is of the form:
+```ocaml
+datatype exp = Int nat (* a natural number literal *)
+  | Var var (* a variable *)
+  | Eq exp exp (* an equality expression *)
+  | GrtThan exp exp (* a greater than expression *)
+  | And exp exp (* a logical and expression *)
+  | Col col (* a column expression *)
+  | Count col (* an aggregator COUNT with a column argument *) 
+  | CountAll (* an aggregator COUNT *)
+datatype col = AGE | EMAIL | ID | LECTURERS | STUDENTS
+```
+For example:
+```ocaml
+(* SELECT 1 *)
+Select (Int 1)
+(* SELECT COUNT (*) = 0 FROM Person *)
+SelectFrom (IsEmpty (CountAll) (Int 0)) (Table PERSON)
+(* SELECT email FROM Person WHERE age = 20 *)
+SelectFromWhere (Col EMAIL) (Table PERSON) (WHERE (Eq (Col AGE) (Int 20))
+```
+
+### The OCL expression
+An OCL expression is of the form:
+```ocaml
+datatype OCLexp = Int nat (* a natural number literal *)
+  | Var var (* a variable *)
+  | Eq OCLexp OCLexp (* an equality expression *)
+  | IVar ivar (* a iterator *)
+  | Att OCLexp att (* an attribute call expression *)
+  | As OCLexp as (* an association call expression *)
+  | Size OCLexp (* a size operator *)
+  | IsEmpty OCLexp (* an isEmpty operator *)
+  | Exists OCLexp OCLexp OCLexp (* an exists operator, it takes a source expression, an iterator and a body expression, respectively *)
+  | PE OCLexp Objectmodel (* partial evaluation expression, it takes an expression to be partially evaluated and the object model *)
+  | AllInstances table (* allInstances operator *)
+```
+where
+```ocaml
+type_synonym var = string
+type_synonym ivar = string
+datatype att = AGE | EMAIL | ID
+datatype as = LECTURERS | STUDENTS
+```
+For example:
+```ocaml
+(* Person.allInstances() *)
+AllInstances PERSON
+(* Person.allInstances()->isEmpty() *)
+IsEmpty (AllInstances PERSON)
+(* Person.allInstances()->exists(l|l.age = 20) *)
+Exists (AllInstances PERSON) (IVar l) (Eq (Att (IVar l) (AGE)) (Int 20))
 ```
 
 ### Structure
@@ -68,6 +132,28 @@ datatype val = VNULL  (* a null value *)
 ```
 
 ### The proof
+For example, here is the formal proof for ```{ocaml}self.lecturers->isEmpty() === SELECT COUNT (*) = 0 FROM Enrollment WHERE students = self```:
+```ocaml
+lemma "eval (MyOCL.IsEmpty (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om 
+= 
+exec (SelectFromWhere 
+(MySQL.Eq (MySQL.CountAll) (MySQL.Int 0)) 
+(Table ENROLLMENT) 
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
+
+proof (induct om) (* apply structural induction on the object model *)
+  case (OM ps es) (* there is only one case *)
+  then show ?case
+  proof (induct es) (* apply induction on es *)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a es)
+    then show ?case by simp
+  qed
+qed
+```
+
 So far, under our formulization, we have been able to prove the following properties:
 ```ocaml
 (* self = caller === SELECT self = caller *)
@@ -76,7 +162,6 @@ So far, under our formulization, we have been able to prove the following proper
 (* self.lecturers->size() === SELECT COUNT (*) FROM Enrollment WHERE students = self *)
 (* self.lecturers->isEmpty() === SELECT COUNT (*) = 0 FROM Enrollment WHERE students = self *)
 (* self.lecturers->exists(l|l=caller) === SELECT COUNT(*) > 0 FROM Enrollment WHERE self = students AND lecturers = caller *)
-(* Person.allInstances()->exists(p|p.age = 30) 
-=== SELECT COUNT (*) > 0 FROM Person WHERE age = 30*)
+(* Person.allInstances()->exists(p|p.age = 30) === SELECT COUNT (*) > 0 FROM Person WHERE age = 30*)
 ```
 The proofs were carried out by Isar.
