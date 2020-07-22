@@ -2,6 +2,8 @@ theory MyMain
   imports Main MyOCL MySQL
 begin
 
+(* PREVENT SLOW CHECKING... 
+
 (* self = caller \<equiv> SELECT self = caller *)
 lemma "eval (MyOCL.Eq (MyOCL.Var self) (MyOCL.Var caller)) om 
 = exec (Select (MySQL.Eq (MySQL.Var self) (MySQL.Var caller))) om"
@@ -137,6 +139,8 @@ next
 case (Cons a list)
   then show ?thesis using filterWithBody_Person_noNeed_Ctx filterWithBody_Person by auto
   qed
+  
+*)
 
 lemma collectPlus_on_Empty_Enrollment : "flatten (collect valList (IVar p) (PEAs (As (IVar p) as.LECTURERS) [])) = []"
 apply(induct valList)
@@ -160,10 +164,8 @@ lemma "eval (Collect (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar
 (IVar l) (MyOCL.Att (IVar l) (MyOCL.EMAIL))) (OM ps es)
 = exec (SelectFromJoin (Col MySQL.EMAIL) (Table ENROLLMENT) (JOIN (Table PERSON) (MySQL.Eq (Col MySQL.LECTURERS) (Col MySQL.ID)))) (OM ps es)"
 apply (simp add: TPerson_ValList TEnrollment_ValList)
-proof (induct ps)
+sorry
 
-
-qed
 end
 
   
