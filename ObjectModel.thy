@@ -2,11 +2,11 @@ theory ObjectModel
 imports Main
 begin
 
-(* Person(id, age, email, students, lecturers) *)
-datatype Person = P string nat string | PNULL
+(* Person(age, email) *)
+datatype Person = P nat string | PNULL
 
 (* Enrollment (students, lecturers) *)
-datatype Enrollment = E string string
+datatype Enrollment = E Person Person
 
 datatype Objectmodel = OM "Person list" "Enrollment list"
 
@@ -17,14 +17,7 @@ datatype val =  VNULL | VInt nat | VString string | VBool bool
   | TEnrollment Objectmodel
   | VObj string
   | VIVar string
-
-fun isIdPerson :: "string \<Rightarrow> Person \<Rightarrow> bool" where
-"isIdPerson v (P pid page pemail) = (v = pid)" |
-"isIdPerson v PNULL = False"
-
-fun getPersonFromId :: "string \<Rightarrow> Person list \<Rightarrow> Person" where
-"getPersonFromId s [] = PNULL" |
-"getPersonFromId s (p#ps) = (if isIdPerson s p then p else (getPersonFromId s ps))"
+  | VJoin "val list"
 
 fun getPersonList :: "Objectmodel \<Rightarrow> Person list" where
 "getPersonList (OM ps es) = ps"
@@ -86,9 +79,6 @@ fun sizeVal :: "val \<Rightarrow> nat" where
 
 fun isEmptyValList :: "val list \<Rightarrow> bool" where
 "isEmptyValList xs = ((sizeValList xs) = 0)"
-(*"isEmptyValList [] = True"
-| "isEmptyValList (a#ls) = False"
-*)
 
 fun isEmptyVal :: "val \<Rightarrow> bool" where
 "isEmptyVal (VList []) = True"

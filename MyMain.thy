@@ -108,18 +108,17 @@ next
 qed
 
 (* Person.allInstances() \<equiv> SELECT Person_id FROM Person *)
-(*
 lemma "eval (MyOCL.AllInstances PERSON) (OM ps es)
 = exec (SelectFrom (MySQL.Col MySQL.ID) (Table PERSON)) (OM ps es)"
-  apply auto
-  sorry
-*)
+apply auto
+apply (simp add: TPerson_ValList)
+done
 
-lemma [simp]:  "filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq (PE (Att (IVar p) att.AGE) (OM (a # list) es)) (OCLexp.Int 30))
+lemma filterWithBody_Person_noNeed_Ctx: "filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq (PEAtt (Att (IVar p) att.AGE)) (OCLexp.Int 30))
 = filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq (Att (IVar p) att.AGE) (OCLexp.Int 30))"
 sorry
 
-lemma [simp]: "translate oclexp1 = sqlexp1 \<and>
+lemma filterWithBody_Person: "translate oclexp1 = sqlexp1 \<and>
 translate oclexp2 = sqlexp2 \<Longrightarrow>
 filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq oclexp1 oclexp2)
 = filterPersons (exp.Eq sqlexp1 sqlexp2) list"
@@ -136,9 +135,35 @@ case Nil
   then show ?thesis by auto
 next
 case (Cons a list)
-  then show ?thesis by auto
-qed
+  then show ?thesis using filterWithBody_Person_noNeed_Ctx filterWithBody_Person by auto
+  qed
 
+lemma collectPlus_on_Empty_Enrollment : "flatten (collect valList (IVar p) (PEAs (As (IVar p) as.LECTURERS) [])) = []"
+apply(induct valList)
+apply simp
+apply auto
+done
+
+lemma [simp]: "naselectList (xs@ys) exp = (naselectList xs exp) @ (naselectList ys exp)"
+apply(induct xs)
+apply auto
+done
+
+lemma [simp]: "collect (xs@ys) ivar exp = (collect xs ivar exp)@(collect ys ivar exp)"
+apply (induct xs)
+apply auto
+done
+
+(* Person.allInstances()\<rightarrow>collect(p|p.lecturers\<rightarrow>collect(l|l.email))
+\<equiv> SELECT email FROM Person JOIN Enrollment ON Person_id = lecturers *)
+lemma "eval (Collect (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) 
+(IVar l) (MyOCL.Att (IVar l) (MyOCL.EMAIL))) (OM ps es)
+= exec (SelectFromJoin (Col MySQL.EMAIL) (Table ENROLLMENT) (JOIN (Table PERSON) (MySQL.Eq (Col MySQL.LECTURERS) (Col MySQL.ID)))) (OM ps es)"
+apply (simp add: TPerson_ValList TEnrollment_ValList)
+proof (induct ps)
+
+
+qed
 end
 
   

@@ -20,9 +20,12 @@ datatype whereClause = WHERE exp
 
 datatype fromItem = Table table
 
+datatype joinClause = JOIN fromItem exp
+
 datatype SQLstm = Select exp 
   | SelectFrom exp fromItem
   | SelectFromWhere exp fromItem whereClause 
+  | SelectFromJoin exp fromItem joinClause
 
 
 fun opposite :: "col \<Rightarrow> col" where
@@ -30,20 +33,22 @@ fun opposite :: "col \<Rightarrow> col" where
   | "opposite LECTURERS = STUDENTS"
 
 
-fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> val" where
-"getAssociationEnd STUDENTS (E students lecturers) = (VString students)"
-  | "getAssociationEnd LECTURERS (E students lecturers) = (VString lecturers)"
+fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> Person" where
+"getAssociationEnd STUDENTS (E students lecturers) = students"
+  | "getAssociationEnd LECTURERS (E students lecturers) = lecturers"
 
 (* projVal: given a column-expression and a row --either in person or enrollment table--,
 it returns the corresonding value *)
 
 fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where 
 "projVal exp VNULL = VNULL"
-| "projVal (Col AGE) (VPerson (P pid page pemail)) = VInt page"
-| "projVal (Col EMAIL) (VPerson (P pid page pemail)) = VString pemail"
-| "projVal (Col ID) (p) = (p)"
-| "projVal (Col STUDENTS) (VEnrollment v) = getAssociationEnd STUDENTS v" 
-| "projVal (Col LECTURERS) (VEnrollment v) = getAssociationEnd LECTURERS v"
+| "projVal (Col AGE) (VPerson (P page pemail)) = VInt page"
+| "projVal (Col EMAIL) (VPerson (P page pemail)) = VString pemail"
+| "projVal (Col ID) p = p"
+| "projVal (Col STUDENTS) (VEnrollment v) = VPerson (getAssociationEnd STUDENTS v)" 
+| "projVal (Col LECTURERS) (VEnrollment v) = VPerson (getAssociationEnd LECTURERS v)"
+
+| "projVal (Col EMAIL) (VJoin [VPerson p, VEnrollment e]) = projVal (Col EMAIL) (VPerson p)" 
 
 (* projValList: given a  expression and a list of rows,
  it returns the list of values corresponding to calling projVal for each row in the given list *)
@@ -100,24 +105,28 @@ occupies the column position in the enrollment *)
 
 fun extEnrollments :: "exp \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
 "extEnrollments (Var v) col Nil = Nil" 
-| "extEnrollments (Var v) col (e#es) = (if ((getAssociationEnd col e) = (VObj v)) 
+| "extEnrollments (Var v) col (e#es) = (if ((VPerson (getAssociationEnd col e)) = (VObj v)) 
     then (VEnrollment e)#(extEnrollments (Var v) col es) 
     else extEnrollments (Var v) col es)"
 
-(* extCol: given a variable-expression and column
+(* extCol: given a val ---either a value of the variable-expression VObj v 
+or a Person VPerson p--- and column
 and a list of enrollments, it returns the list of values
 that occupies the column position in the enrollments such that
-the unknown ---VObj v--- value of the variable-expression 
+the val ---VObj v or VPerson p---
 occupies the opposite column position in the enrollment *)
 
-fun extCol :: "exp \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
-"extCol (Var v) col Nil = Nil" 
-| "extCol (Var v) col (e#es) =  (if ((getAssociationEnd (opposite col) e) = (VObj v)) 
-then (((getAssociationEnd col e))#(extCol (Var v) col es)) 
-else (extCol (Var v) col es))"
+fun extCol :: "val \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
+"extCol val col [] = []" 
+| "extCol (VObj v) col (e#es) =  (if ((VPerson (getAssociationEnd (opposite col) e)) = (VObj v)) 
+then (((VPerson (getAssociationEnd col e)))#(extCol (VObj v) col es)) 
+else (extCol (VObj v) col es))"
+| "extCol (VPerson p) col (e#es) = (if ((getAssociationEnd (opposite col) e)) = (p) 
+then (((VPerson (getAssociationEnd col e)))#(extCol (VPerson p) col es))  
+else (extCol (VPerson p) col es))" 
 
 fun naselectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
- "naselectList Nil exp = Nil"
+ "naselectList [] exp = []"
 | "naselectList (v#vs) exp = (select v exp) # (naselectList vs exp)"
 
 fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
@@ -168,7 +177,50 @@ fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" w
     else filterWhere vs (WHERE e))"
 *)
 
+lemma TPerson_ValList: "[TPerson (OM ps es)] = mapPersonListToValList ps"
+sorry
 
+lemma TEnrollment_ValList: "[TEnrollment (OM ps es)] = mapEnrollmentToValList es"
+sorry
+(* 
+getFromItem: given a from item --- currently, either the original Person table or
+the original Enrollment table --- and an object model, it returns the val list indicates
+the whole original Person table or the original Enrollment table under the val form.
+
+Notice that TPerson and TEnrollment are special constructors which represents the notion
+of the whole table, for the time being, we need to keep the object model within.
+
+For additional usage which requires [TPerson om] of the actual list form (i.e. (VPerson p)#ps)
+consider using lemma TPerson_ValList and TEnrollment_ValList.  
+*)
+fun getFromItem :: "fromItem \<Rightarrow> Objectmodel \<Rightarrow>val list" where
+"getFromItem (Table PERSON) om = [TPerson om]"
+| "getFromItem (Table ENROLLMENT) om = [TEnrollment om]"
+
+(* 
+checkOnCondition: given two values, each from each side of the join 
+---currently, these values are assumed to be VPerson and VEnrollment as the join now 
+is only between Person and Enrollment--- 
+and an on-expression ---currently, it is an equality expression where the left-hand side 
+is a column from the Person table and the right hand side is a column from the Enrollment table, 
+it returns the 
+boolean indicates that the two values return true when evaluated them on the on-expression.
+*)
+fun checkOnCondition :: "val \<Rightarrow> val \<Rightarrow> exp \<Rightarrow> bool" where
+"checkOnCondition (VPerson p) (VEnrollment e) (Eq (Col personCol) (Col enrollmentCol))
+= equalVal (select (VPerson p) (Col personCol)) (select (VEnrollment e) (Col enrollmentCol))"
+
+fun joinValWithValList :: "val \<Rightarrow> val list \<Rightarrow> exp \<Rightarrow> val list" where
+"joinValWithValList val [] exp = []"
+| "joinValWithValList val (val1#valList1) exp = 
+(if (checkOnCondition val val1 exp) then ((VJoin [val,val1])#(joinValWithValList val valList1 exp))
+else (joinValWithValList val valList1 exp))"
+
+fun joinValListWithValList :: "val list \<Rightarrow> val list \<Rightarrow> exp \<Rightarrow> val list" where
+"joinValListWithValList [] valList2 exp = []"
+| "joinValListWithValList (val1#valList1) valList2 exp 
+= (joinValWithValList val1 valList2 exp)
+@(joinValListWithValList valList1 valList2 exp)"
 
 (* exec: this is the key function: given a SQL-expression and and object
 model it returns a list of values. Notice that we keep the original
@@ -176,13 +228,11 @@ table-type-name to be sued in selectlist *)
 
 fun exec :: "SQLstm \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "exec (Select selitems) om  = [select VNULL selitems]"
-| "exec (SelectFrom exp (Table PERSON)) om 
-    = selectList ([TPerson om]) exp"
-|  "exec (SelectFrom exp (Table ENROLLMENT)) om 
-    = selectList ([TEnrollment om]) exp"
-| "exec (SelectFromWhere exp (Table PERSON) whereExp) om
-    = selectList (filterWhere ([TPerson om]) whereExp) exp"
-| "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) om
-    = selectList (filterWhere ([TEnrollment om]) whereExp) exp"
+| "exec (SelectFrom exp fromItem) om 
+    = selectList (getFromItem fromItem om) exp"
+| "exec (SelectFromWhere exp fromItem whereExp) om
+    = selectList (filterWhere (getFromItem fromItem om) whereExp) exp"
+| "exec (SelectFromJoin exp fromItem (JOIN fromItem2 onExp)) om
+= selectList (joinValListWithValList (getFromItem fromItem om) (getFromItem fromItem2 om) onExp) exp"
 
 end
