@@ -142,32 +142,106 @@ case (Cons a list)
   
 *)
 
+(*
 lemma collectPlus_on_Empty_Enrollment : "flatten (collect valList (IVar p) (PEAs (As (IVar p) as.LECTURERS) [])) = []"
 apply(induct valList)
 apply simp
 apply auto
 done
 
+
+
+
+*)
+ 
+lemma [simp]: "TEnrollment (OM [] es) = VNULL" 
+  sorry
+lemma [simp]: "TPerson (OM [] es) = VNULL" 
+  sorry
+lemma [simp]: "checkOnCondition VNULL VNULL exp = False " 
+  sorry
+lemma [simp]: "joinValListWithValList es [] exp = []"
+  sorry
+
+lemma [simp]: "joinValListWithValList (mapEnrollmentToValList es) ps exp =
+               joinValListWithValList ps (mapEnrollmentToValList es) exp"
+  sorry
+
 lemma [simp]: "naselectList (xs@ys) exp = (naselectList xs exp) @ (naselectList ys exp)"
 apply(induct xs)
 apply auto
 done
 
+lemma [simp]: "projVal (Col ID) a = a" 
+  sorry
+
+lemma [simp]: "projVal (Col col) (VEnrollment aa) =
+               VPerson (getAssociationEnd col aa)"
+  sorry
+
+lemma [simp]: "projVal (Col col.LECTURERS) (VJoin [VPerson (getAssociationEnd col.STUDENTS aa), VEnrollment aa]) = 
+               projVal (Col col.LECTURERS) (VEnrollment aa)"
+  sorry
+
+(*
+lemma dist1 : "extCol a col (aa # es) = (extCol a col [aa]) @ (extCol a col es)"
+  sorry
+*)
+
+lemma lem0 : 
+      "extCol a col.LECTURERS es =
+       naselectList (joinValWithValList a (mapEnrollmentToValList es) (exp.Eq (Col col.STUDENTS) (Col ID))) (Col col.LECTURERS)"
+ (*
+ apply (induct es)
+   apply auto
+  done
+*)
+  sorry
+
+lemma lem1 : "flatten (collect ps (IVar p) (PEAs (As (IVar p) as.LECTURERS) es)) =
+               naselectList (joinValListWithValList (mapEnrollmentToValList es)  ps (exp.Eq (Col col.STUDENTS) (Col ID)))
+               (Col col.LECTURERS)"
+  sorry
+(*
+  apply (induct ps)
+   apply (simp)
+  apply (simp add: lem0)
+  done
+*)
+
 lemma [simp]: "collect (xs@ys) ivar exp = (collect xs ivar exp)@(collect ys ivar exp)"
 apply (induct xs)
 apply auto
-done
+  done
+
 
 (* Person.allInstances()\<rightarrow>collect(p|p.lecturers\<rightarrow>collect(l|l.email))
 \<equiv> SELECT email FROM Person JOIN Enrollment ON Person_id = lecturers *)
 lemma "eval (Collect (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) 
 (IVar l) (MyOCL.Att (IVar l) (MyOCL.EMAIL))) (OM ps es)
 = exec (SelectFromJoin (Col MySQL.EMAIL) (Table ENROLLMENT) (JOIN (Table PERSON) (MySQL.Eq (Col MySQL.LECTURERS) (Col MySQL.ID)))) (OM ps es)"
-apply (simp add: TPerson_ValList TEnrollment_ValList)
-sorry
+(* apply (simp add: TPerson_ValList TEnrollment_ValList) *)
+  apply (induct ps)
+  apply (simp)
+  apply (simp)
+
+
+(*
+OCL
+ collect (naselectList (joinValWithValList (VPerson a) (mapEnrollmentToValList es) (exp.Eq (Col col.STUDENTS) (Col ID))) (Col col.LECTURERS))
+        (IVar l) (PEAtt (Att (IVar l) att.EMAIL)) =
+
+SQL
+naselectList (joinValWithValList (VPerson a) (mapEnrollmentToValList es) (exp.Eq (Col col.LECTURERS) (Col ID))) (Col col.EMAIL)
+*)
+
+   
+
+
+
 
 end
 
-  
+  (*exec (SelectFromJoin exp fromItem (JOIN fromItem2 onExp)) om*)
 
 

@@ -31,26 +31,49 @@ fun transAs :: "MyOCL.as \<Rightarrow> MySQL.col" where
 "transAs MyOCL.STUDENTS = MySQL.STUDENTS" |
 "transAs MyOCL.LECTURERS = MySQL.LECTURERS"
 
-fun evalWithCtx :: "OCLexp \<Rightarrow> OCLexp \<Rightarrow> val \<Rightarrow> val" where
-"evalWithCtx (MyOCL.Int i) var val = VInt i"
+function (sequential) evalWithCtx :: "OCLexp \<Rightarrow> OCLexp \<Rightarrow> val \<Rightarrow> val" where
+"evalWithCtx (MyOCL.Int x) (MyOCL.IVar i) val = VInt x"
 (* For the time being *)
 | "evalWithCtx (MyOCL.Var x) (MyOCL.IVar i) val = (VObj x)" 
 | "evalWithCtx (MyOCL.IVar x) (MyOCL.IVar i) val = val"
 (* *)
-| "evalWithCtx (MyOCL.Eq e1 e2) var val = 
-VBool (equalVal (evalWithCtx e1 var val) (evalWithCtx e2 var val))" 
+| "evalWithCtx (MyOCL.Eq e1 e2) (MyOCL.IVar i) val = 
+VBool (equalVal (evalWithCtx e1 (MyOCL.IVar i) val) (evalWithCtx e2 (MyOCL.IVar i) val))" 
 
-| "evalWithCtx (PEAtt (MyOCL.Att (Var v) att)) (MyOCL.IVar i) val
-= projVal (Col (transAtt att)) (VObj v)"
+(*
+| "evalWithCtx (PEAtt (MyOCL.Att (Var v) MyOCL.AGE)) (MyOCL.IVar i) (VPerson p)
+= projVal (Col  MySQL.AGE ) (VObj v)"
+*)
 
-| "evalWithCtx (PEAtt (MyOCL.Att (IVar v) att)) (MyOCL.IVar i) val
-= projVal (Col (transAtt att)) val"
+| "evalWithCtx (PEAs (MyOCL.As (IVar v)  MyOCL.STUDENTS) es) (MyOCL.IVar i) val
+= VList (extCol val  MySQL.STUDENTS es)"
+| "evalWithCtx (PEAs (MyOCL.As (IVar v)  MyOCL.LECTURERS) es) (MyOCL.IVar i) val
+= VList (extCol val  MySQL.LECTURERS es)"
+  by pat_completeness auto
+termination evalWithCtx
+  apply (relation  "(\<lambda>p. size (fst p)) <*mlex*> {}")
+  sorry
 
-| "evalWithCtx (PEAs (MyOCL.As (Var v) as) es) (MyOCL.IVar i) val
-= VList (extCol (VObj v) (transAs as) es)"
+(*  "(\<lambda>p. size (fst p)) <*mlex*> {}" *)
+(*
 
-| "evalWithCtx (PEAs (MyOCL.As (IVar v) as) es) (MyOCL.IVar i) val
-= VList (extCol val (transAs as) es)"
+| "evalWithCtx (PEAtt (MyOCL.Att (Var v) MyOCL.EMAIL)) (MyOCL.IVar i) val
+= projVal (Col  MySQL.EMAIL) (VObj v)"
+| "evalWithCtx (PEAs (MyOCL.As (Var v)  MyOCL.STUDENTS) es) (MyOCL.IVar i) val
+= VList (extCol (VObj v) MySQL.STUDENTS es)"
+| "evalWithCtx (PEAs (MyOCL.As (Var v)  MyOCL.LECTURERS) es) (MyOCL.IVar i) val
+= VList (extCol (VObj v) MySQL.LECTURERS es)"
+| "evalWithCtx (PEAtt (MyOCL.Att (IVar v)  MyOCL.AGE)) (MyOCL.IVar i) val
+= projVal (Col  MySQL.AGE) val"
+| "evalWithCtx (PEAtt (MyOCL.Att (IVar v)  MyOCL.EMAIL)) (MyOCL.IVar i) val
+= projVal (Col  MySQL.EMAIL) val"
+| "evalWithCtx (PEAs (MyOCL.As (IVar v)  MyOCL.STUDENTS) es) (MyOCL.IVar i) val
+= VList (extCol val  MySQL.STUDENTS es)"
+| "evalWithCtx (PEAs (MyOCL.As (IVar v)  MyOCL.LECTURERS) es) (MyOCL.IVar i) val
+= VList (extCol val  MySQL.LECTURERS es)"
+*)
+
+
 (*
 | "evalWithCtx (MyOCL.Size exp) var val
 = VList [VInt (sizeVal (evalWithCtx exp var val))]"
@@ -66,6 +89,7 @@ fun filterWithBody :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Righ
     then (val#(filterWithBody vs var exp))   
     else filterWithBody vs var exp)"
 
+
 fun partialEval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> OCLexp" where
 "partialEval (MyOCL.Int i) om = (MyOCL.Int i)"
 | "partialEval (MyOCL.Var x) om = (MyOCL.Var x)"
@@ -77,8 +101,8 @@ fun partialEval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> OCLexp" where
 | "partialEval (MyOCL.As (IVar v) as) om = (PEAs (MyOCL.As (IVar v) as) (getEnrollmentList om))"
 
 fun flatten :: "val list \<Rightarrow> val list" where
-"flatten [] = []" |
-"flatten ((VList vs)#vss) = vs@(flatten vss)"
+"flatten [] = []" 
+| "flatten ((VList vs)#vss) = vs@(flatten vss)"
 
 fun collect :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "collect [] ivar exp = []"           
