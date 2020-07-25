@@ -12,10 +12,14 @@ qed
 (* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)
 lemma "eval (MyOCL.Eq (MyOCL.Att (MyOCL.Var self) MyOCL.AGE) (MyOCL.Int 30)) om
 = exec (SelectFromWhere (MySQL.Eq (MySQL.Col (MySQL.AGE)) (MySQL.Int 30))
-(Table PERSON)
+(Table MySQL.PERSON)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) om" 
-  apply auto
-  done        
+proof (induct om)
+case (OM ps es)
+from this have "(mapPersonListToValList ps) = [TPerson (OM ps es)]" 
+using TPersonToValList by simp
+then show ?case by simp
+qed  
 
 (* self.lecturers \<equiv> SELECT lecturers FROM Enrollment WHERE students = self *)
 lemma "eval (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS) om
@@ -23,16 +27,16 @@ lemma "eval (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS) om
 (Table ENROLLMENT)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
 proof (induct om)
-  case (OM ps es)
-  then show ?case
+case (OM ps es)
+from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
+using TEnrollmentToValList by simp
+then show ?case
   proof (induct es)
     case Nil
     then show ?case by simp
   next
     case (Cons a es)
-    then show ?case 
-      apply auto
-      done
+    then show ?case by simp
   qed
 qed
 
@@ -42,8 +46,10 @@ lemma "eval (MyOCL.Size (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
 (Table ENROLLMENT)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
 proof (induct om)
-  case (OM ps es)
-  then show ?case
+case (OM ps es)
+from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
+using TEnrollmentToValList by simp
+then show ?case
   proof (induct es)
     case Nil
     then show ?case by simp
@@ -59,8 +65,10 @@ lemma "eval (MyOCL.IsEmpty (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
 (Table ENROLLMENT)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
 proof (induct om)
-  case (OM ps es)
-  then show ?case
+case (OM ps es)
+from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
+using TEnrollmentToValList by simp
+then show ?case
   proof (induct es)
     case Nil
     then show ?case by simp
@@ -70,72 +78,58 @@ proof (induct om)
   qed
 qed
 
-lemma [simp]: "isTrueVal (VBool (e1 ∧ e2)) = (e1 \<and> e2)" 
-proof (cases "e1")
-  case True
-  then have h1: "e1" by simp
-  then show ?thesis 
-  proof (cases "e2")
-    case True
-    then show ?thesis using h1 by simp
-    next
-      case False
-      then show ?thesis by simp
-    qed
-next
-  case False
-  then show ?thesis by simp
-qed
-
-
-
 (* self.lecturers→exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
 AND lecturers = caller *)
 lemma  "eval (MyOCL.Exists (MyOCL.As (Var self) MyOCL.LECTURERS) (MyOCL.IVar l) 
-(MyOCL.Eq (MyOCL.IVar l) (MyOCL.Var caller))) (OM ps es)
+(MyOCL.Eq (MyOCL.IVar l) (MyOCL.Var caller))) om
 = exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
 (WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
-(MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) (OM ps es)"
- proof (induct es)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a list)
-  then show ?case 
-    by auto
+(MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) om"
+proof (induct om)
+case (OM ps es)
+from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
+using TEnrollmentToValList by simp
+then show ?case
+   proof (induct es)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a es)
+    then show ?case by simp
+  qed
 qed
 
 (* Person.allInstances() \<equiv> SELECT Person_id FROM Person *)
-lemma "eval (MyOCL.AllInstances PERSON) (OM ps es)
-= exec (SelectFrom (MySQL.Col MySQL.ID) (Table PERSON)) (OM ps es)"
-apply auto
-apply (simp add: TPerson_ValList)
-done
-
-lemma filterWithBody_Person_noNeed_Ctx: "filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq (PEAtt (Att (IVar p) att.AGE)) (OCLexp.Int 30))
-= filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq (Att (IVar p) att.AGE) (OCLexp.Int 30))"
-sorry
-
-lemma filterWithBody_Person: "translate oclexp1 = sqlexp1 \<and>
-translate oclexp2 = sqlexp2 \<Longrightarrow>
-filterWithBody (mapPersonListToValList list) (IVar p) (OCLexp.Eq oclexp1 oclexp2)
-= filterPersons (exp.Eq sqlexp1 sqlexp2) list"
-sorry
-
+lemma "eval (MyOCL.AllInstances PERSON) om
+= exec (SelectFrom (MySQL.Col MySQL.ID) (Table MySQL.PERSON)) om"
+proof (induct om)
+case (OM ps es)
+then show ?case 
+  proof (induct ps)
+    case Nil
+    then show ?case by simp
+    next
+    case (Cons a ps)
+    then show ?case by simp
+  qed
+qed
 
 (* Person.allInstances() \<rightarrow> exists(p|p.age = 30) 
 \<equiv> SELECT COUNT * > 0 FROM Person WHERE age = 30*)
-lemma "eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (IVar p) (MyOCL.Eq (MyOCL.Att (MyOCL.IVar p) (MyOCL.AGE)) (MyOCL.Int 30))) (OM ps es)
-= exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table PERSON) 
-(WHERE (MySQL.Eq (Col col.AGE) (MySQL.Int 30))))) (OM ps es)"
-proof (cases ps)
-case Nil
-  then show ?thesis by auto
-next
-case (Cons a list)
-  then show ?thesis using filterWithBody_Person_noNeed_Ctx filterWithBody_Person by auto
-  qed
-  
+lemma "eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (IVar p) (MyOCL.Eq (MyOCL.Att (MyOCL.IVar p) (MyOCL.AGE)) (MyOCL.Int 30))) om
+= exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table MySQL.PERSON) 
+(WHERE (MySQL.Eq (Col col.AGE) (MySQL.Int 30))))) om"
+proof (induct om)
+case (OM ps es)
+then show ?case
+  proof (induct ps)
+  case Nil
+    then show ?case by simp
+  next
+  case (Cons a ps)
+    then show ?case by simp
+  qed  
+qed  
 
 lemma collectPlus_on_Empty_Enrollment : "flatten (collect valList (IVar p) (PEAs (As (IVar p) as.LECTURERS) [])) = []"
 apply(induct valList)

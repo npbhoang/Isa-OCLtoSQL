@@ -38,12 +38,4 @@ fun flatten :: "val list list \<Rightarrow> val list" where
 "flatten [] = []" 
 | "flatten (v#vss) = v@(flatten vss)"
 
-(*
-fun collectAux :: "val list \<Rightarrow> OCLexp \<Rightarrow> Enrollment \<Rightarrow> val list" where
-"collectAux []  (As (IVar p) as.LECTURERS) en = []"
-| "collectAux (v#vs)  (As (IVar p) col) e = 
-(extCol v (transAs col) [e])
-@(collectAux vs  (As (IVar p) col) e)"
-*)
-
 end

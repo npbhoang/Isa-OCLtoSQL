@@ -15,12 +15,8 @@ fun evalWithCtx :: "OCLexp \<Rightarrow> OCLexp \<Rightarrow> val \<Rightarrow> 
 (* For the time being *)
 | "evalWithCtx (MyOCL.Var x) (MyOCL.IVar i) val = (VObj x)" 
 (*| "evalWithCtx (MyOCL.IVar x) (MyOCL.IVar i) val = val"*)
-(* 
 | "evalWithCtx (MyOCL.Eq e1 e2) (MyOCL.IVar i) val = 
 VBool (equalVal (evalWithCtx e1 (MyOCL.IVar i) val) (evalWithCtx e2 (MyOCL.IVar i) val))" 
-*)
-| "evalWithCtx (PEAtt (MyOCL.Att (IVar v) MyOCL.EMAIL)) (MyOCL.IVar i) val
-= projVal (Col  MySQL.EMAIL) val"
 (*
 | "evalWithCtx (PEAs (MyOCL.As (IVar v)  MyOCL.STUDENTS) es) (MyOCL.IVar i) val
 = VList (extCol val  MySQL.STUDENTS es)"
@@ -32,10 +28,7 @@ termination evalWithCtx
   apply (relation  "(\<lambda>p. size (fst p)) <*mlex*> {}")
   sorry
 *)
-
-(*  "(\<lambda>p. size (fst p)) <*mlex*> {}" *)
 (*
-
 | "evalWithCtx (PEAtt (MyOCL.Att (Var v) MyOCL.EMAIL)) (MyOCL.IVar i) val
 = projVal (Col  MySQL.EMAIL) (VObj v)"
 | "evalWithCtx (PEAs (MyOCL.As (Var v)  MyOCL.STUDENTS) es) (MyOCL.IVar i) val
@@ -59,6 +52,9 @@ termination evalWithCtx
 | "evalWithCtx (MyOCL.Exists src v body) var val
 = (evalWithCtx src var val)"
 *)
+lemma [simp]: "evalWithCtx (PEAtt (MyOCL.Att (IVar v) att)) (MyOCL.IVar i) val
+= projVal (Col (transAtt att)) val"
+sorry
 
 fun filterWithBody :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "filterWithBody Nil var (exp) = Nil" 
@@ -73,6 +69,14 @@ fun collect :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow>
 fun collectPlus :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "collectPlus [] ivar exp = []"           
 | "collectPlus (val#vs) ivar exp = (evalWithCtx exp ivar val)#(collectPlus vs ivar exp)"
+
+(*
+fun collectAux :: "val list \<Rightarrow> OCLexp \<Rightarrow> Enrollment \<Rightarrow> val list" where
+"collectAux []  (As (IVar p) as.LECTURERS) en = []"
+| "collectAux (v#vs)  (As (IVar p) col) e = 
+(extCol v (transAs col) [e])
+@(collectAux vs  (As (IVar p) col) e)"
+*)
 
 fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "eval (MyOCL.Int i) om = [VInt i]"

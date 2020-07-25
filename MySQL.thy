@@ -41,13 +41,14 @@ fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> Person" whe
 it returns the corresonding value *)
 
 fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where 
-(* "projVal exp VNULL = VNULL" *)
 "projVal (Col AGE) (VPerson (P page pemail)) = VInt page"
 | "projVal (Col EMAIL) (VPerson (P page pemail)) = VString pemail"
-| "projVal (Col ID) (VPerson (P page pemail)) = VPerson (P page pemail)"
 | "projVal (Col STUDENTS) (VEnrollment (E p1 p2)) = VPerson p1" 
 | "projVal (Col LECTURERS) (VEnrollment (E p1 p2)) = VPerson p2"
 | "projVal (Col EMAIL) (VJoin [VEnrollment e, VPerson p]) = projVal (Col EMAIL) (VPerson p)"
+
+lemma [simp]: "projVal (Col ID) (VPerson p) = VPerson p"
+sorry
 
 (* projValList: given a  expression and a list of rows,
  it returns the list of values corresponding to calling projVal for each row in the given list *)
@@ -97,16 +98,16 @@ fun selectNoCtx :: "exp \<Rightarrow> val list" where
 *)
 
 
-(* extEnrollment: given a variable-expression and column
+(* extEnrollment: given an object ---currently, we consider VObj v--- and column
 and a list of enrollments, it returns the list of enrollments such that
 the unknown ---VObj v--- value of the variable-expression 
 occupies the column position in the enrollment *)
 
-fun extEnrollments :: "exp \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
-"extEnrollments (Var v) col Nil = Nil" 
-| "extEnrollments (Var v) col (e#es) = (if ((VPerson (getAssociationEnd col e)) = (VObj v)) 
-    then (VEnrollment e)#(extEnrollments (Var v) col es) 
-    else extEnrollments (Var v) col es)"
+fun extEnrollments :: "val \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
+"extEnrollments (VObj v) col Nil = Nil" 
+| "extEnrollments (VObj v) col (e#es) = (if ((VPerson (getAssociationEnd col e)) = (VObj v)) 
+    then (VEnrollment e)#(extEnrollments (VObj v) col es) 
+    else extEnrollments (VObj v) col es)"
 
 (* extCol: given a val ---either a value of the variable-expression VObj v 
 or a Person VPerson p--- and column
@@ -152,23 +153,31 @@ fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 | "selectList (v#vs) (And e1 e2) = (select v (And e1 e2)) # (selectList vs (And e1 e2))"
 *)
 
-(* filterWhere: given a list of values --- currently, either the original Person table or
+(* 
+filterWhere: given a list of values --- currently, either the original Person table or
 the original Enrollment table --- and a where-clause, it returns the values that satisfy 
-(select equals to true) 
-the where-clause 
+(select equals to true) the where-clause 
 *)
 fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" where
 "filterWhere [] exp =  []"
-(*| "filterWhere [TPerson (OM ps es)] (WHERE (Eq (Col ID) (Var var)))
-= [VObj var]"*)
+| "filterWhere ((VPerson p)#valps) (WHERE exp)
+= (if (isTrueVal (select (VPerson p) exp)) 
+  then ((VPerson p)#filterWhere valps (WHERE exp)) 
+  else (filterWhere valps (WHERE exp)))"
 (*
-| "filterWhere [TPerson (OM ps es)] (WHERE exp)
-= filterPersons exp ps"
-| "filterWhere [TEnrollment (OM ps es)] (WHERE (Eq (Col col) (Var var)))
-= extEnrollments (Var var) col es"
 | "filterWhere [TEnrollment (OM ps es)] (WHERE (And e1 e2))
 = filterEnrollments (And e1 e2) es"
 *)
+(* ASSUMPTION: Given the valid table Person, if the where-clause is of the form
+---Person_id = var--- then it returns exactly one Person, which is the VObj var itself *)
+lemma [simp]: "filterWhere [TPerson (OM ps es)] (WHERE (Eq (Col ID) (Var var))) = [VObj var]"
+sorry
+(* ASSUMPTION: Given the valid table Enrollment, if the where-clause is either of the form
+---LECTURERS = var or STUDENTS = var--- then it returns exactly 
+the list of Enrollments such that either the (VObj var) is the STUDENTS or the LECTURERS *)
+lemma [simp]: "filterWhere [TEnrollment (OM ps es)] (WHERE (Eq (Col col) (Var var)))
+= extEnrollments (VObj var) col es"
+sorry
 
 
 (* This is to be discussed, completed later, when dealing with Subselect
@@ -177,13 +186,12 @@ fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" w
     else filterWhere vs (WHERE e))"
 *)
 
-(*
-lemma TPerson_ValList: "[TPerson (OM ps es)] = mapPersonListToValList ps"
+lemma TPersonToValList: "[TPerson (OM ps es)] = mapPersonListToValList ps"
 sorry
 
-lemma TEnrollment_ValList: "[TEnrollment (OM ps es)] = mapEnrollmentToValList es"
+lemma TEnrollmentToValList: "[TEnrollment (OM ps es)] = mapEnrollmentToValList es"
 sorry
-*)
+
 (* 
 getFromItem: given a from item --- currently, either the original Person table or
 the original Enrollment table --- and an object model, it returns the val list indicates
@@ -250,11 +258,6 @@ fun exec :: "SQLstm \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 | "exec (SelectFromWhere exp (Table PERSON) whereExp) (OM ps es)
     = selectList (filterWhere (mapPersonListToValList ps) whereExp) exp"
 | "exec (SelectFromJoin exp (Table ENROLLMENT) (JOIN (Table PERSON) onExp)) (OM ps es)
-= selectList (joinValListWithValList (mapEnrollmentToValList es) (mapPersonListToValList ps)  onExp) exp"
-
-(*
-| "exec (SelectFromJoin exp fromItem (JOIN fromItem2 onExp)) om
-= selectList (joinValListWithValList (getFromItem fromItem om) (getFromItem fromItem2 om) onExp) exp"
-*)
+= selectList (joinValListWithValList (mapEnrollmentToValList es) (mapPersonListToValList ps) onExp) exp"
 
 end

@@ -10,8 +10,12 @@ datatype Enrollment = E Person Person
 
 datatype Objectmodel = OM "Person list" "Enrollment list"
 
-datatype val =  VNULL | VInt nat | VString string | VBool bool 
-  | VPerson Person | VEnrollment Enrollment 
+datatype val =  VNULL 
+  | VInt nat 
+  | VString string 
+  | VBool bool 
+  | VPerson Person 
+  | VEnrollment Enrollment 
   | VList "val list"
   | TPerson Objectmodel
   | TEnrollment Objectmodel
@@ -55,7 +59,6 @@ where
 (if (greaterThanVal e1 e2) 
 then (greaterThanValList e1s e2s) else False)"
 
-
 fun andVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 "andVal (VBool b1) (VBool b2) = (b1 \<and> b2)"
 
@@ -84,10 +87,7 @@ fun isEmptyVal :: "val \<Rightarrow> bool" where
 "isEmptyVal (VList []) = True"
 | "isEmptyVal (VList (a#ls)) = False"
 
-
 fun isTrueVal :: "val \<Rightarrow> bool" where
-"isTrueVal (VBool True) = True"
-| "isTrueVal (VBool False) = False"
-
+"isTrueVal (VBool val) = val"
 
 end
