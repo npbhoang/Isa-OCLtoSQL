@@ -47,9 +47,7 @@ fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where
 | "projVal (Col ID) (VPerson (P page pemail)) = VPerson (P page pemail)"
 | "projVal (Col STUDENTS) (VEnrollment (E p1 p2)) = VPerson p1" 
 | "projVal (Col LECTURERS) (VEnrollment (E p1 p2)) = VPerson p2"
-(*
-| "projVal (Col EMAIL) (VJoin [VPerson p, VEnrollment e]) = projVal (Col EMAIL) (VPerson p)"
-*) 
+| "projVal (Col EMAIL) (VJoin [VEnrollment e, VPerson p]) = projVal (Col EMAIL) (VPerson p)"
 
 (* projValList: given a  expression and a list of rows,
  it returns the list of values corresponding to calling projVal for each row in the given list *)
