@@ -47,9 +47,11 @@ termination evalWithCtx
 | "evalWithCtx (MyOCL.Exists src v body) var val
 = (evalWithCtx src var val)"
 *)
+(* FACT --- Due to the performance, the definition is put as lemma *)
 lemma [simp]: "evalWithCtx (PEAtt (MyOCL.Att (IVar v) att)) (MyOCL.IVar i) val
 = projVal (Col (transAtt att)) val"
 sorry
+(* FACT --- Due to the performance, the definition is put as lemma *)
 lemma [simp]: "evalWithCtx (PEAs (MyOCL.As (IVar v) as) es) (MyOCL.IVar i) val
 = VList (extCol val (transAs as) es)"
 sorry
@@ -63,8 +65,8 @@ fun filterWithBody :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Righ
 fun collect :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "collect [] ivar exp = []"           
 | "collect (val#vs) ivar exp = (evalWithCtx exp ivar val)#(collect vs ivar exp)"
-
-                    
+(* FACT --- perform a collect operator from a list 
+appended by two lists is same of perform a collect opeartor on them individually *)                    
 lemma [simp]: "collect (xs@ys) ivar exp = (collect xs ivar exp)@(collect ys ivar exp)"
 proof (induct xs)
 case Nil
@@ -78,8 +80,8 @@ fun collectPlus :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightar
 "collectPlus [] ivar exp = []"           
 | "collectPlus (val#vs) ivar exp = 
 (flatten (evalWithCtx exp ivar val))@ (collectPlus vs ivar exp)"
-
-
+(* FACT --- perform a collect operator from a list 
+appended by two lists is same of perform a collect opeartor on them individually *)    
 lemma [simp] : "collectPlus valList (IVar p) (PEAs (As (IVar p) as) []) = []"
 proof (induct valList)
 case Nil

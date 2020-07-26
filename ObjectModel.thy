@@ -2,8 +2,9 @@ theory ObjectModel
 imports Main
 begin
 
-(* Person(age, email) *)
-datatype Person = P nat string | PNULL
+(* Person (age, email) *)
+datatype Person = P nat string
+  | PNULL (* An invalid Person *)
 
 (* Enrollment (students, lecturers) *)
 datatype Enrollment = E Person Person

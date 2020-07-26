@@ -39,14 +39,13 @@ fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> Person" whe
 
 (* projVal: given a column-expression and a row --either in person or enrollment table--,
 it returns the corresonding value *)
-
 fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where 
 "projVal (Col AGE) (VPerson (P page pemail)) = VInt page"
 | "projVal (Col EMAIL) (VPerson (P page pemail)) = VString pemail"
 | "projVal (Col STUDENTS) (VEnrollment e) = VPerson (getAssociationEnd STUDENTS e)" 
 | "projVal (Col LECTURERS) (VEnrollment e) = VPerson (getAssociationEnd LECTURERS e)"
 | "projVal (Col EMAIL) (VJoin [VEnrollment e, VPerson p]) = projVal (Col EMAIL) (VPerson p)"
-
+(* FACT --- Due to the performance, the definition is put as lemma *)
 lemma [simp]: "projVal (Col ID) (VPerson p) = VPerson p"
 sorry
 
@@ -126,7 +125,7 @@ else (extCol val col es))"
 fun naselectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 "naselectList [] exp = []"
 | "naselectList (v#vs) exp = (select v exp) # (naselectList vs exp)"
-
+(* FACT --- select over a list appended by two lists is the same as selct them individually *)
 lemma [simp]: "naselectList (xs@ys) exp = (naselectList xs exp) @ (naselectList ys exp)"
 proof (induct xs)
 case Nil
@@ -177,11 +176,13 @@ fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" w
 | "filterWhere [TEnrollment (OM ps es)] (WHERE (And e1 e2))
 = filterEnrollments (And e1 e2) es"
 *)
-(* ASSUMPTION: Given the valid table Person, if the where-clause is of the form
+
+(* FACT: Given the valid table Person, if the where-clause is of the form
 ---Person_id = var--- then it returns exactly one Person, which is the VObj var itself *)
 lemma [simp]: "filterWhere [TPerson (OM ps es)] (WHERE (Eq (Col ID) (Var var))) = [VObj var]"
 sorry
-(* ASSUMPTION: Given the valid table Enrollment, if the where-clause is either of the form
+
+(* FACT: Given the valid table Enrollment, if the where-clause is either of the form
 ---LECTURERS = var or STUDENTS = var--- then it returns exactly 
 the list of Enrollments such that either the (VObj var) is the STUDENTS or the LECTURERS *)
 lemma [simp]: "filterWhere [TEnrollment (OM ps es)] (WHERE (Eq (Col col) (Var var)))
@@ -228,14 +229,9 @@ is a column from the Person table and the right hand side is a column from the E
 it returns the 
 boolean indicates that the two values return true when evaluated them on the on-expression.
 *)
-
 fun  checkOnCondition :: "val \<Rightarrow> val \<Rightarrow> exp \<Rightarrow> bool" where
 "checkOnCondition val (VEnrollment e) (Eq (Col enrollmentCol) (Col personCol))
 = equalVal (select val (Col personCol)) (select (VEnrollment e) (Col enrollmentCol))"
-
-
-
-
 
 fun joinValWithValList :: "val \<Rightarrow> val list \<Rightarrow> exp \<Rightarrow> val list" where
 "joinValWithValList val [] exp = []"
@@ -243,7 +239,6 @@ fun joinValWithValList :: "val \<Rightarrow> val list \<Rightarrow> exp \<Righta
 (if (checkOnCondition val val1 exp) 
 then ((VJoin [val,val1])#(joinValWithValList val valList1 exp))
 else (joinValWithValList val valList1 exp))"
-
 
 fun joinValListWithValList :: "val list \<Rightarrow> val list \<Rightarrow> exp \<Rightarrow> val list" where
 "joinValListWithValList [] valList2 exp = []"
@@ -254,7 +249,6 @@ fun joinValListWithValList :: "val list \<Rightarrow> val list \<Rightarrow> exp
 (* exec: this is the key function: given a SQL-expression and and object
 model it returns a list of values. Notice that we keep the original
 table-type-name to be sued in selectlist *)
-
 fun exec :: "SQLstm \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "exec (Select selitems) om  = [select VNULL selitems]"
 | "exec (SelectFrom exp (Table ENROLLMENT)) (OM ps es) 

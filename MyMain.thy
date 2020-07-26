@@ -131,7 +131,9 @@ case (Cons a ps)
 qed  
 qed  
 
-(* ASSUMPTION *)       
+(* ASSUMPTION: Given a collect-then-flatten operator, if the source of this operator is the Person 
+list from the Object model and the for each of the Enrollment in the Object model, return
+the Person in the LECTURERS side *)       
 lemma lem4: "collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) (a # es))
 =  VPerson (getAssociationEnd col.LECTURERS a) # (collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) es))"
 sorry
@@ -153,8 +155,11 @@ qed
 qed
 
 
-(* ASSUMPTION *)
-lemma lem5 : "joinValWithValList (VEnrollment a) (mapPersonListToValList ps) (exp.Eq (Col col.LECTURERS) (Col ID))
+(* ASSUMPTION: When join a single Enrollment object with the Person list 
+from the Object Model under the on-expression col = ID then
+return the tuple contains the Enrollment and the Person rightaway *)  
+lemma lem5 : "joinValWithValList (VEnrollment a) (mapPersonListToValList ps) 
+(exp.Eq (Col col.LECTURERS) (Col ID))
 = [VJoin [VEnrollment a, (VPerson (getAssociationEnd col.LECTURERS a))]]"
 sorry
 
