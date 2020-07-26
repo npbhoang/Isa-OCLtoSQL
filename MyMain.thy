@@ -3,14 +3,14 @@ theory MyMain
   begin 
 
 (* self = caller \<equiv> SELECT self = caller *)
-lemma "eval (MyOCL.Eq (MyOCL.Var self) (MyOCL.Var caller)) om 
+theorem "eval (MyOCL.Eq (MyOCL.Var self) (MyOCL.Var caller)) om 
 = exec (Select (MySQL.Eq (MySQL.Var self) (MySQL.Var caller))) om"
 proof -
   show ?thesis by simp      
 qed     
 
 (* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)
-lemma "eval (MyOCL.Eq (MyOCL.Att (MyOCL.Var self) MyOCL.AGE) (MyOCL.Int 30)) om
+theorem "eval (MyOCL.Eq (MyOCL.Att (MyOCL.Var self) MyOCL.AGE) (MyOCL.Int 30)) om
 = exec (SelectFromWhere (MySQL.Eq (MySQL.Col (MySQL.AGE)) (MySQL.Int 30))
 (Table MySQL.PERSON)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) om" 
@@ -22,7 +22,7 @@ then show ?case by simp
 qed  
 
 (* self.lecturers \<equiv> SELECT lecturers FROM Enrollment WHERE students = self *)
-lemma "eval (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS) om
+theorem "eval (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS) om
 = exec (SelectFromWhere (MySQL.Col MySQL.LECTURERS) 
 (Table ENROLLMENT)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
@@ -31,17 +31,17 @@ case (OM ps es)
 from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
 using TEnrollmentToValList by simp
 then show ?case
-  proof (induct es)
-    case Nil
-    then show ?case by simp
-  next
-    case (Cons a es)
-    then show ?case by simp
-  qed
+proof (induct es)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a es)
+  then show ?case by simp
+qed
 qed
 
 (* self.lecturers\<rightarrow>size() \<equiv> SELECT COUNT *  FROM Enrollment WHERE students = self *)
-lemma "eval (MyOCL.Size (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
+theorem "eval (MyOCL.Size (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
 = exec (SelectFromWhere (MySQL.Count MySQL.LECTURERS) 
 (Table ENROLLMENT)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
@@ -50,17 +50,17 @@ case (OM ps es)
 from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
 using TEnrollmentToValList by simp
 then show ?case
-  proof (induct es)
-    case Nil
-    then show ?case by simp
-  next
-    case (Cons a es)
-    then show ?case by simp
-  qed
+proof (induct es)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a es)
+  then show ?case by simp
+qed
 qed
 
 (* self.lecturers\<rightarrow>isEmpty() \<equiv> SELECT COUNT * = 0 FROM Enrollment WHERE students = self *)
-lemma "eval (MyOCL.IsEmpty (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
+theorem "eval (MyOCL.IsEmpty (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
 = exec (SelectFromWhere (MySQL.Eq (MySQL.CountAll) (MySQL.Int 0)) 
 (Table ENROLLMENT)
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
@@ -69,18 +69,18 @@ case (OM ps es)
 from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
 using TEnrollmentToValList by simp
 then show ?case
-  proof (induct es)
-    case Nil
-    then show ?case by simp
-  next
-    case (Cons a es)
-    then show ?case by simp
-  qed
+proof (induct es)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a es)
+  then show ?case by simp
+qed
 qed
 
 (* self.lecturers→exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
 AND lecturers = caller *)
-lemma  "eval (MyOCL.Exists (MyOCL.As (Var self) MyOCL.LECTURERS) (MyOCL.IVar l) 
+theorem  "eval (MyOCL.Exists (MyOCL.As (Var self) MyOCL.LECTURERS) (MyOCL.IVar l) 
 (MyOCL.Eq (MyOCL.IVar l) (MyOCL.Var caller))) om
 = exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
 (WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
@@ -90,94 +90,68 @@ case (OM ps es)
 from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
 using TEnrollmentToValList by simp
 then show ?case
-   proof (induct es)
-    case Nil
-    then show ?case by simp
-  next
-    case (Cons a es)
-    then show ?case by simp
-  qed
+ proof (induct es)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a es)
+  then show ?case by simp
+qed
 qed
 
 (* Person.allInstances() \<equiv> SELECT Person_id FROM Person *)
-lemma "eval (MyOCL.AllInstances PERSON) om
+theorem "eval (MyOCL.AllInstances PERSON) om
 = exec (SelectFrom (MySQL.Col MySQL.ID) (Table MySQL.PERSON)) om"
 proof (induct om)
 case (OM ps es)
 then show ?case 
-  proof (induct ps)
-    case Nil
-    then show ?case by simp
-    next
-    case (Cons a ps)
-    then show ?case by simp
-  qed
+proof (induct ps)
+  case Nil
+  then show ?case by simp
+  next
+  case (Cons a ps)
+  then show ?case by simp
+qed
 qed
 
 (* Person.allInstances() \<rightarrow> exists(p|p.age = 30) 
 \<equiv> SELECT COUNT * > 0 FROM Person WHERE age = 30*)
-lemma "eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (IVar p) (MyOCL.Eq (MyOCL.Att (MyOCL.IVar p) (MyOCL.AGE)) (MyOCL.Int 30))) om
+theorem "eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (IVar p) (MyOCL.Eq (MyOCL.Att (MyOCL.IVar p) (MyOCL.AGE)) (MyOCL.Int 30))) om
 = exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table MySQL.PERSON) 
 (WHERE (MySQL.Eq (Col col.AGE) (MySQL.Int 30))))) om"
 proof (induct om)
 case (OM ps es)
 then show ?case
-  proof (induct ps)
-  case Nil
-    then show ?case by simp
-  next
-  case (Cons a ps)
-    then show ?case by simp
-  qed  
+proof (induct ps)
+case Nil
+  then show ?case by simp
+next
+case (Cons a ps)
+  then show ?case by simp
+qed  
 qed  
 
-lemma collectPlus_on_Empty_Enrollment : "flatten (collect valList (IVar p) (PEAs (As (IVar p) as.LECTURERS) [])) = []"
-apply(induct valList)
-apply simp
-apply auto
-done
-
-
-
-lemma [simp]: "joinValListWithValList (mapEnrollmentToValList es) ps exp =
-               joinValListWithValList ps (mapEnrollmentToValList es) exp"
-  sorry
-
-lemma [simp]: "naselectList (xs@ys) exp = (naselectList xs exp) @ (naselectList ys exp)"
-apply(induct xs)
-apply auto
-done
-
-lemma [simp]: "projVal (Col col) (VEnrollment aa) =
-               VPerson (getAssociationEnd col aa)"
-               sorry
-
-
-lemma [simp]: "collect (xs@ys) ivar exp = (collect xs ivar exp)@(collect ys ivar exp)"
-apply (induct xs)
-apply auto
-done
-
-
 (* ASSUMPTION *)       
-lemma [simp]: "collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) (a # es))
+lemma lem4: "collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) (a # es))
 =  VPerson (getAssociationEnd col.LECTURERS a) # (collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) es))"
 sorry
 
-
-(* FACT *)
-lemma [simp]:  "collectPlus src (IVar p) (PEAs (As (IVar p) as.LECTURERS) []) = []"
-sorry
-
-
 (* Person.allInstances()\<rightarrow>collect(p|p.lecturers)\<rightarrow>flatten()))
 \<equiv> SELECT lecturers FROM Enrollment *)
-lemma " eval (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) (OM ps es)
-= exec (SelectFrom (Col MySQL.LECTURERS) (Table ENROLLMENT)) (OM ps es)"
-apply auto
-apply (induct es)
-apply simp_all
-done
+lemma " eval (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) om
+= exec (SelectFrom (Col MySQL.LECTURERS) (Table ENROLLMENT)) om"
+proof (induct om)
+case (OM ps es)
+then show ?case
+proof (induct es)
+case Nil
+then show ?case by simp
+next
+case (Cons a es)
+then show ?case using lem4 by simp
+qed
+qed
+
 
 (* ASSUMPTION *)
 lemma lem5 : "joinValWithValList (VEnrollment a) (mapPersonListToValList ps) (exp.Eq (Col col.LECTURERS) (Col ID))
@@ -186,15 +160,20 @@ sorry
 
 (* Person.allInstances()\<rightarrow>collect(p|p.lecturers\<rightarrow>collect(l|l.email))
 \<equiv> SELECT email FROM Person JOIN Enrollment ON Person_id = lecturers *)
-lemma "eval (Collect (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) 
-(IVar l) (MyOCL.Att (IVar l) (MyOCL.EMAIL))) (OM ps es)
-= exec (SelectFromJoin (Col MySQL.EMAIL) (Table ENROLLMENT) (JOIN (Table PERSON) (MySQL.Eq (Col MySQL.LECTURERS) (Col MySQL.ID)))) (OM ps es)"
-(* apply (simp add: TPerson_ValList TEnrollment_ValList) *)
-  apply (induct es)
-  apply (auto)
-  apply (simp add: lem5)
-  done
-
+lemma "eval (Collect (CollectPlus (AllInstances MyOCL.PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) 
+(IVar l) (MyOCL.Att (IVar l) (MyOCL.EMAIL))) om
+= exec (SelectFromJoin (Col MySQL.EMAIL) (Table MySQL.ENROLLMENT) (JOIN (Table MySQL.PERSON) (MySQL.Eq (Col MySQL.LECTURERS) (Col MySQL.ID)))) om"
+proof (induct om)
+case (OM ps es)
+then show ?case
+proof (induct es)
+case Nil
+then show ?case by simp
+next
+case (Cons a es)
+then show ?case using lem4 lem5 by simp
+qed
+qed
 
 end
 

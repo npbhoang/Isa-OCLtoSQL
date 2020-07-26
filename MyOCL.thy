@@ -34,8 +34,7 @@ fun partialEval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> OCLexp" where
 | "partialEval (MyOCL.As (Var v) as) om = (PEAs (MyOCL.As (Var v) as) (getEnrollmentList om))"
 | "partialEval (MyOCL.As (IVar v) as) om = (PEAs (MyOCL.As (IVar v) as) (getEnrollmentList om))"
 
-fun flatten :: "val list list \<Rightarrow> val list" where
-"flatten [] = []" 
-| "flatten (v#vss) = v@(flatten vss)"
+fun flatten :: "val \<Rightarrow> val list" where
+"flatten (VList vs) = vs" 
 
 end

@@ -18,11 +18,6 @@ fun evalWithCtx :: "OCLexp \<Rightarrow> OCLexp \<Rightarrow> val \<Rightarrow> 
 | "evalWithCtx (MyOCL.Eq e1 e2) (MyOCL.IVar i) val = 
 VBool (equalVal (evalWithCtx e1 (MyOCL.IVar i) val) (evalWithCtx e2 (MyOCL.IVar i) val))" 
 (*
-| "evalWithCtx (PEAs (MyOCL.As (IVar v)  MyOCL.STUDENTS) es) (MyOCL.IVar i) val
-= VList (extCol val  MySQL.STUDENTS es)"
-| "evalWithCtx (PEAs (MyOCL.As (IVar v)  MyOCL.LECTURERS) es) (MyOCL.IVar i) val
-= VList (extCol val  MySQL.LECTURERS es)"
-
   by pat_completeness auto
 termination evalWithCtx
   apply (relation  "(\<lambda>p. size (fst p)) <*mlex*> {}")
@@ -55,6 +50,9 @@ termination evalWithCtx
 lemma [simp]: "evalWithCtx (PEAtt (MyOCL.Att (IVar v) att)) (MyOCL.IVar i) val
 = projVal (Col (transAtt att)) val"
 sorry
+lemma [simp]: "evalWithCtx (PEAs (MyOCL.As (IVar v) as) es) (MyOCL.IVar i) val
+= VList (extCol val (transAs as) es)"
+sorry
 
 fun filterWithBody :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "filterWithBody Nil var (exp) = Nil" 
@@ -66,9 +64,31 @@ fun collect :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow>
 "collect [] ivar exp = []"           
 | "collect (val#vs) ivar exp = (evalWithCtx exp ivar val)#(collect vs ivar exp)"
 
+                    
+lemma [simp]: "collect (xs@ys) ivar exp = (collect xs ivar exp)@(collect ys ivar exp)"
+proof (induct xs)
+case Nil
+then show ?case by simp
+next
+case (Cons a xs)
+then show ?case by simp
+qed
+
 fun collectPlus :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "collectPlus [] ivar exp = []"           
-| "collectPlus (val#vs) ivar exp = (evalWithCtx exp ivar val)#(collectPlus vs ivar exp)"
+| "collectPlus (val#vs) ivar exp = 
+(flatten (evalWithCtx exp ivar val))@ (collectPlus vs ivar exp)"
+
+
+lemma [simp] : "collectPlus valList (IVar p) (PEAs (As (IVar p) as) []) = []"
+proof (induct valList)
+case Nil
+then show ?case by simp
+next
+case (Cons a valList)
+then show ?case by simp
+qed
+
 
 (*
 fun collectAux :: "val list \<Rightarrow> OCLexp \<Rightarrow> Enrollment \<Rightarrow> val list" where

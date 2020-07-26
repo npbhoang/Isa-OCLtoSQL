@@ -43,8 +43,8 @@ it returns the corresonding value *)
 fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where 
 "projVal (Col AGE) (VPerson (P page pemail)) = VInt page"
 | "projVal (Col EMAIL) (VPerson (P page pemail)) = VString pemail"
-| "projVal (Col STUDENTS) (VEnrollment (E p1 p2)) = VPerson p1" 
-| "projVal (Col LECTURERS) (VEnrollment (E p1 p2)) = VPerson p2"
+| "projVal (Col STUDENTS) (VEnrollment e) = VPerson (getAssociationEnd STUDENTS e)" 
+| "projVal (Col LECTURERS) (VEnrollment e) = VPerson (getAssociationEnd LECTURERS e)"
 | "projVal (Col EMAIL) (VJoin [VEnrollment e, VPerson p]) = projVal (Col EMAIL) (VPerson p)"
 
 lemma [simp]: "projVal (Col ID) (VPerson p) = VPerson p"
@@ -124,8 +124,17 @@ else (extCol val col es))"
 
 
 fun naselectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
- "naselectList [] exp = []"
+"naselectList [] exp = []"
 | "naselectList (v#vs) exp = (select v exp) # (naselectList vs exp)"
+
+lemma [simp]: "naselectList (xs@ys) exp = (naselectList xs exp) @ (naselectList ys exp)"
+proof (induct xs)
+case Nil
+then show ?case by simp
+next
+case (Cons a xs)
+then show ?case by simp
+qed
 
 fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 
@@ -241,7 +250,6 @@ fun joinValListWithValList :: "val list \<Rightarrow> val list \<Rightarrow> exp
 | "joinValListWithValList (val1#valList1) valList2 exp 
 = (joinValWithValList val1 valList2 exp)
 @(joinValListWithValList valList1 valList2 exp)"
-
 
 (* exec: this is the key function: given a SQL-expression and and object
 model it returns a list of values. Notice that we keep the original
