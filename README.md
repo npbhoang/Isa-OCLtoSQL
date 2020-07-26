@@ -13,16 +13,16 @@ Please note that this is an on-going project.
 
 ### The context
 In this version, we assume the following contextual model:
-- The model has a table Person with two attributes: age of type int and email of type string. Then, the datatype Person has two constructors, the first one takes three arguments of attributes - representing an actual Person object while the second one takes no argument - representing an invalid Person.
+- The model has a table Person with two attributes: age of type nat and email of type string. Then, the datatype Person has two constructors, the first one takes two arguments of attributes - representing an actual Person object while the second one takes no argument - representing an invalid Person.
+We have decided to remove the identifier to make the contextual model definition more precise.
 ```ocaml
-(* Person (Person_id, age, string) *) 
-datatype Person = P string nat string | PNULL
+(* Person (ge, string) *) 
+datatype Person = P nat string | PNULL
 ``` 
-- There is an many-to-many association called Enrollment which specifies the relationship between persons with persons. This datatype acts similar to the way SQL design association tables with the foreign keys refer to the primary keys
-of the association end tables. 
+- There is an many-to-many association called Enrollment which specifies the relationship between persons with persons. Accordingly, we changed from having two foreign keys to having two actual Persons. This, of course, make the definition of contextual model more precise.
 ```ocaml
 (* Enrollment (lectures, students) *)
-datatype Enrollment = E string string
+datatype Enrollment = E Person Person
 ```
 - Finally, the contextual instance model, also knows as Object model, including a list of Persons and a list of Enrollments. It is important to note that OCL and SQL in our case share the same contextual model.
 ```ocaml
@@ -30,11 +30,12 @@ datatype Objectmodel = OM "Person list" "Enrollment list"
 ```
 
 ### The SQL-select statement
-An SQL-select statement is of the form:
+We have decided to add one simple full inner JOIN for SQLstm. An SQL-select statement is of the form:
 ```ocaml
 datatype SQLstm = Select exp (* SELECT-expression without context *)
   | SelectFrom exp fromItem (* SELECT-expression with a FROM-clause *)
   | SelectFromWhere exp fromItem whereClause (* SELECT-expression with a FROM-clause and a WHERE-clause *)
+  | SelectFromJoin exp fromItem joinClause (* SELECT-expression with a JOIN-clause between two tables, for the time being, they are a Entity table and a related Associaiton table *)
 datatype whereClause = WHERE exp
 datatype fromItem = Table table
 datatype table = PERSON | ENROLLMENT
@@ -73,8 +74,11 @@ datatype OCLexp = Int nat (* a natural number literal *)
   | Size OCLexp (* a size operator *)
   | IsEmpty OCLexp (* an isEmpty operator *)
   | Exists OCLexp OCLexp OCLexp (* an exists operator, it takes a source expression, an iterator and a body expression, respectively *)
-  | PE OCLexp Objectmodel (* partial evaluation expression, it takes an expression to be partially evaluated and the object model *)
+  | PEAtt OCLexp (* partial evaluation expression, it takes an attribute expression to be partially evaluated *)
+  | PEAs OCLexp "Enrollment list" (* partial evaluation expression, it takes an association expression to be partially evaluated and the Enrollment lsit from the Object Model*)
   | AllInstances table (* allInstances operator *)
+  | Collect OCLexp OCLexp OCLexp (* collect operator *)
+  | CollectPlus OCLexp OCLexp OCLexp (* collect with the body returns a collect-type, then flatten afterwards*)
 ```
 where
 ```ocaml
@@ -94,10 +98,11 @@ Exists (AllInstances PERSON) (IVar l) (Eq (Att (IVar l) (AGE)) (Int 20))
 ```
 
 ### Structure
-In general, our formalization is in four-fold:
+In general, our formalization is in five-fold:
 - ObjectModel.thy: formalization of the contextual model and its instance.
 - MySQL.thy: formalization of SQL-select statement.
 - MyOCL.thy: formalization of OCL expression.
+- OCLtoSQL.thy: formalization of the "bridge" between OCL and SQL.
 - MyMain.thy: formalization of the mapping between SQL and OCL.
 
 ### Main idea 
@@ -163,5 +168,9 @@ So far, under our formulization, we have been able to prove the following proper
 (* self.lecturers->isEmpty() === SELECT COUNT (*) = 0 FROM Enrollment WHERE students = self *)
 (* self.lecturers->exists(l|l=caller) === SELECT COUNT(*) > 0 FROM Enrollment WHERE self = students AND lecturers = caller *)
 (* Person.allInstances()->exists(p|p.age = 30) === SELECT COUNT (*) > 0 FROM Person WHERE age = 30*)
+(* Person.allInstances()->collect(p|p.lecturers)->flatten()))
+=== SELECT lecturers FROM Enrollment *)
+(* Person.allInstances()->collect(p|p.lecturers)->flatten()->collect(l|l.email)
+=== SELECT email FROM Person JOIN Enrollment ON Person_id = lecturers *)
 ```
 The proofs were carried out by Isar.
