@@ -9,7 +9,7 @@ In this project, we propose a formalization of evaluating an OCL expression, exe
 Please note that this is an on-going project.
 
 ==================
-## 20th Jul, 2020
+## v1.0.2, 26th Jul, 2020
 
 ### The context
 In this version, we assume the following contextual model:
