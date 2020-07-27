@@ -4,6 +4,30 @@ begin
 
 type_synonym var = string
 
+datatype pid = ID Person
+
+datatype SQLPerson = SQLP pid nat string
+datatype SQLEnrollment = SQLE pid pid
+
+datatype SQLObjectmodel = SQLOM "SQLPerson list" "SQLEnrollment list"
+
+fun mapEntityObject :: "Person \<Rightarrow> SQLPerson" where
+"mapEntityObject (P age email) = (SQLP (ID (P age email)) age email)"
+
+fun mapAssociationLink :: "Enrollment \<Rightarrow> SQLEnrollment" where
+"mapAssociationLink (E e1 e2) = (SQLE (ID e1) (ID e2))"
+
+fun mapEntityObjectList :: "Person list \<Rightarrow> SQLPerson list" where
+"mapEntityObjectList [] = []"
+| "mapEntityObjectList (p#ps) = (mapEntityObject p)#(mapEntityObjectList ps)"
+
+fun mapAssociationLinkList :: "Enrollment list \<Rightarrow> SQLEnrollment list" where
+"mapAssociationLinkList [] = []"
+| "mapAssociationLinkList (e#es) = (mapAssociationLink e)#(mapAssociationLinkList es)"
+
+fun map :: "Objectmodel \<Rightarrow> SQLObjectmodel" where
+"map (OM ps es) = SQLOM (mapEntityObjectList ps) (mapAssociationLinkList es)"
+
 datatype table = PERSON | ENROLLMENT
 datatype col = AGE | EMAIL | ID | LECTURERS | STUDENTS
 
