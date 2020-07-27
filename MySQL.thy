@@ -4,7 +4,7 @@ begin
 
 type_synonym var = string
 
-datatype pid = ID Person | IDVar var
+datatype pid = PID Person | IDVar var
 
 datatype SQLPerson = SQLP pid nat string
 datatype SQLEnrollment = SQLE pid pid
@@ -12,15 +12,15 @@ datatype SQLEnrollment = SQLE pid pid
 datatype SQLObjectmodel = SQLOM "SQLPerson list" "SQLEnrollment list"
 
 fun mapEntityObject :: "Person \<Rightarrow> SQLPerson" where
-"mapEntityObject (P age email) = (SQLP (ID (P age email)) age email)"
+"mapEntityObject (P age email) = (SQLP (PID (P age email)) age email)"
 
 fun mapAssociationLink :: "Enrollment \<Rightarrow> SQLEnrollment" where
-"mapAssociationLink (E e1 e2) = (SQLE (ID e1) (ID e2))"
+"mapAssociationLink (E e1 e2) = (SQLE (PID e1) (PID e2))"
 
 fun mapEntityObjectList :: "Person list \<Rightarrow> SQLPerson list" where
 "mapEntityObjectList [] = []"
-| "mapEntityObjectList (p#ps) = (mapEntityObject p)#(mapEntityObjectList ps)"
-
+(*| "mapEntityObjectList (p#ps) = (mapEntityObject p)#(mapEntityObjectList ps)"
+*)
 fun mapAssociationLinkList :: "Enrollment list \<Rightarrow> SQLEnrollment list" where
 "mapAssociationLinkList [] = []"
 | "mapAssociationLinkList (e#es) = (mapAssociationLink e)#(mapAssociationLinkList es)"
@@ -28,24 +28,50 @@ fun mapAssociationLinkList :: "Enrollment list \<Rightarrow> SQLEnrollment list"
 fun map :: "Objectmodel \<Rightarrow> SQLObjectmodel" where
 "map (OM ps es) = SQLOM (mapEntityObjectList ps) (mapAssociationLinkList es)"
 
-datatype row = RNULL
+datatype column = RNULL
 | RInt nat
 | RString string
 | RBool bool
 | RID pid
-| RTuple "row list"
 
-fun valToRow :: "val \<Rightarrow> row" where
-"valToRow (VInt i) = (RInt i)"
-| "valToRow (VPerson p) = RID (ID p)"
-| "valToRow (VObj var) = RID (IDVar var)"
+datatype table = PERSON | ENROLLMENT
+datatype col = AGE | EMAIL | ID | LECTURERS | STUDENTS | PINT | PBOOL | PSTRING | PNULL | PTOP
+
+datatype row = RTuple "(col * column) list"
+
+fun getSQLPersonList :: "SQLObjectmodel \<Rightarrow> SQLPerson list" where
+"getSQLPersonList (SQLOM ps es) = ps"
+
+fun getIdSQLPerson :: "SQLPerson \<Rightarrow> pid" where
+"getIdSQLPerson (SQLP personid age email) = personid"
+
+fun getAgeSQLPerson :: "SQLPerson \<Rightarrow> nat" where
+"getAgeSQLPerson (SQLP personid age email) = age"
+
+fun getEmailSQLPerson :: "SQLPerson \<Rightarrow> string" where
+"getEmailSQLPerson (SQLP personid age email) = email"
+
+fun mapPersonListToRowList :: "SQLPerson list \<Rightarrow> row list" where
+"mapPersonListToRowList [] = []" |
+"mapPersonListToRowList (p#ps) = RTuple [(Pair MySQL.ID (RID (getIdSQLPerson p)))]#(mapPersonListToRowList ps)"
+
+fun valToCol :: "val \<Rightarrow> column" where
+"valToCol VNULL = RNULL"
+| "valToCol (VInt i) = (RInt i)"
+| "valToCol (VPerson p) = RID (PID p)"
+| "valToCol (VBool b) = (RBool b)"
+| "valToCol (VObj var om) = RID (IDVar var)"
+
+fun typeToCol :: "val \<Rightarrow> col" where
+"typeToCol (VInt i) = PINT"
+| "typeToCol (VString s) = PSTRING"
+| "typeToCol (VBool b) = PBOOL"
+| "typeToCol (VPerson p) = PSTRING"
+| "typeToCol (VObj var om) = PSTRING"
 
 fun OCL2PSQL :: "val list \<Rightarrow> row list" where
 "OCL2PSQL [] = []" 
-| "OCL2PSQL (val#list) = (valToRow val)#(OCL2PSQL list)"
-
-datatype table = PERSON | ENROLLMENT
-datatype col = AGE | EMAIL | ID | LECTURERS | STUDENTS
+| "OCL2PSQL (val#list) = (RTuple [Pair (typeToCol val) (valToCol val)])#(OCL2PSQL list)"
 
 datatype exp = Int nat 
 | Var var 
@@ -77,17 +103,7 @@ fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> Person" whe
 "getAssociationEnd STUDENTS (E students lecturers) = students"
   | "getAssociationEnd LECTURERS (E students lecturers) = lecturers"
 
-(* projVal: given a column-expression and a row --either in person or enrollment table--,
-it returns the corresonding value *)
-fun projVal :: "exp \<Rightarrow> val \<Rightarrow> val" where 
-"projVal (Col AGE) (VPerson (P page pemail)) = VInt page"
-| "projVal (Col EMAIL) (VPerson (P page pemail)) = VString pemail"
-| "projVal (Col STUDENTS) (VEnrollment e) = VPerson (getAssociationEnd STUDENTS e)" 
-| "projVal (Col LECTURERS) (VEnrollment e) = VPerson (getAssociationEnd LECTURERS e)"
-| "projVal (Col EMAIL) (VJoin [VEnrollment e, VPerson p]) = projVal (Col EMAIL) (VPerson p)"
-(* FACT --- Due to the performance, the definition is put as lemma *)
-lemma [simp]: "projVal (Col ID) (VPerson p) = VPerson p"
-sorry
+
 
 (* projValList: given a  expression and a list of rows,
  it returns the list of values corresponding to calling projVal for each row in the given list *)
@@ -102,12 +118,36 @@ COMMENT *)
 and an expression, it returns the value that correspond to
 evaluat the expression for exactly that value (the only relevant
 cases are var and columns ---i.e., either attributes or association-ends) *)
+
+fun equalCol :: "(col \<times> column) \<Rightarrow> (col \<times> column) \<Rightarrow> bool" where
+"equalCol (Pair col1 (RID i1)) (Pair col2 (RID i2)) 
+= ((col1 = col2) \<and> (i1 = i2))" 
+
+fun equalColList :: "(col \<times> column) list \<Rightarrow> (col \<times> column) list \<Rightarrow> bool" where
+"equalColList [] [] = True"
+| "equalColList [] (c#cs) = False"
+| "equalColList (c#cs) [] = False"
+| "equalColList (c1#cs1) (c2#cs2) = 
+((equalCol c1 c2) \<and> (equalColList cs1 cs2))"
+
+fun equalRow ::  "row \<Rightarrow> row \<Rightarrow> bool" where
+"equalRow (RTuple cs1) (RTuple cs2) = equalColList cs1 cs2"
+
+fun getColumnInRow:: "col \<Rightarrow> (col \<times> column) list \<Rightarrow> (col \<times> column)" where
+"getColumnInRow col [] = Pair (PNULL) (RNULL)"
+| "getColumnInRow col (c#cs) = (if (col = fst c) 
+then c else (getColumnInRow col cs))" 
+
+
+fun getColumn :: "col \<Rightarrow> row \<Rightarrow> (col \<times> column)" where
+"getColumn col (RTuple cs) = getColumnInRow col cs"
+
 fun select :: "row \<Rightarrow> exp \<Rightarrow> row" where
-"select row (MySQL.Int i) = RInt i"
-| "select row (MySQL.Var v) = (RID (IDVar v))"
+"select row (MySQL.Int i) = RTuple [(Pair PINT (RInt i))]"
+| "select row (MySQL.Var v) = RTuple [(Pair PSTRING (RID (IDVar v)))]"
+| "select row  (Eq e1 e2) = RTuple [(Pair PBOOL (RBool (equalRow (select row e1) (select row e2))))]"
+| "select row (Col at) = RTuple [getColumn at row]"
 (*
-| "select row (Col col) = projVal (Col col) val"
-| "select val (Eq e1 e2) = VBool (equalVal (select val e1) (select val e2))"
 | "select val (GrtThan e1 e2) = VBool (greaterThanVal (select val e1) (select val e2))"
 | "select val (And e1 e2) = VBool (andVal (select val e1) (select val e2))"
 *)
@@ -163,11 +203,11 @@ fun extCol :: "val \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow>
 | "extCol val col (e#es) = (if (VPerson (getAssociationEnd (opposite col) e)) = val
 then (((VPerson (getAssociationEnd col e)))#(extCol val col es))  
 else (extCol val col es))" 
+*)
 
-
-fun naselectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
+fun naselectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
 "naselectList [] exp = []"
-| "naselectList (v#vs) exp = (select v exp) # (naselectList vs exp)"
+| "naselectList (row#rows) exp = (select row exp) # (naselectList rows exp)"
 (* FACT --- select over a list appended by two lists is the same as selct them individually *)
 lemma [simp]: "naselectList (xs@ys) exp = (naselectList xs exp) @ (naselectList ys exp)"
 proof (induct xs)
@@ -178,8 +218,8 @@ case (Cons a xs)
 then show ?case by simp
 qed
 
-fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
-
+fun selectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
+(*
 (* agregator expressions *)
 "selectList vs (Count col) = [VInt (sizeValList vs)]"
 | "selectList vs (Eq (Count col) (MySQL.Int i)) = [VBool (equalVal (VInt (sizeValList vs)) (VInt i))]"
@@ -187,10 +227,9 @@ fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 | "selectList vs (CountAll) =  [VInt (sizeValList vs)]"
 | "selectList vs (Eq (CountAll) (MySQL.Int i)) = [VBool (equalVal (VInt (sizeValList vs)) (VInt i))]"
 | "selectList vs (GrtThan (CountAll) (MySQL.Int i)) = [VBool (greaterThanVal (VInt (sizeValList vs)) (VInt i))]"
+*)
 (* no-agregator expressions *)
-| "selectList vs exp = naselectList vs exp"
-
-
+"selectList vs exp = naselectList vs exp"
 (*
 | "selectList Nil (MySQL.Int i) = Nil"
 | "selectList (v#vs) (MySQL.Int i) = (select v (MySQL.Int i)) # (selectList vs (MySQL.Int i))"
@@ -204,22 +243,26 @@ fun selectList :: "val list \<Rightarrow> exp \<Rightarrow> val list" where
 | "selectList (v#vs) (And e1 e2) = (select v (And e1 e2)) # (selectList vs (And e1 e2))"
 *)
 
+fun isSatisfied :: "row \<Rightarrow> exp \<Rightarrow> bool" where
+"isSatisfied row exp = undefined"
+
 (* 
 filterWhere: given a list of values --- currently, either the original Person table or
 the original Enrollment table --- and a where-clause, it returns the values that satisfy 
 (select equals to true) the where-clause 
 *)
-fun filterWhere :: "val list \<Rightarrow> whereClause \<Rightarrow> val list" where
+fun filterWhere :: "row list \<Rightarrow> whereClause \<Rightarrow> row list" where
 "filterWhere [] exp =  []"
-| "filterWhere ((VPerson p)#valps) (WHERE exp)
-= (if (isTrueVal (select (VPerson p) exp)) 
-  then ((VPerson p)#filterWhere valps (WHERE exp)) 
-  else (filterWhere valps (WHERE exp)))"
+| "filterWhere (row#rows) (WHERE exp)
+= (if (isSatisfied row exp) 
+  then (row#filterWhere rows (WHERE exp)) 
+  else (filterWhere rows (WHERE exp)))"
 (*
 | "filterWhere [TEnrollment (OM ps es)] (WHERE (And e1 e2))
 = filterEnrollments (And e1 e2) es"
 *)
 
+(*
 (* FACT: Given the valid table Person, if the where-clause is of the form
 ---Person_id = var--- then it returns exactly one Person, which is the VObj var itself *)
 lemma [simp]: "filterWhere [TPerson (OM ps es)] (WHERE (Eq (Col ID) (Var var))) = [VObj var]"
@@ -295,7 +338,9 @@ COMMENT *)
 model it returns a list of values. Notice that we keep the original
 table-type-name to be sued in selectlist *)
 fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
-"exec (Select selitems) sqlom = [select RNULL selitems]"
+"exec (Select selitems) sqlom = [select (RTuple [(Pair PNULL RNULL)]) selitems]"
+| "exec (SelectFromWhere exp (Table PERSON) whereExp) sqlom
+    = selectList (filterWhere (mapPersonListToRowList (getSQLPersonList sqlom)) whereExp) exp"
 (* COMMENT
 | "exec (SelectFrom exp (Table ENROLLMENT)) (OM ps es) 
     = selectList (mapEnrollmentToValList es) exp"
@@ -303,8 +348,7 @@ fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
     = selectList (mapPersonListToValList ps) exp"
 | "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) (OM ps es)
     = selectList (filterWhere (mapEnrollmentToValList es) whereExp) exp"
-| "exec (SelectFromWhere exp (Table PERSON) whereExp) (OM ps es)
-    = selectList (filterWhere (mapPersonListToValList ps) whereExp) exp"
+
 | "exec (SelectFromJoin exp (Table ENROLLMENT) (JOIN (Table PERSON) onExp)) (OM ps es)
 = selectList (joinValListWithValList (mapEnrollmentToValList es) (mapPersonListToValList ps) onExp) exp"
 COMMENT *)

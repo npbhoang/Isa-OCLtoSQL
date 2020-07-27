@@ -1,11 +1,12 @@
 theory OCLtoSQL
 imports Main MySQL MyOCL
 begin
-(* COMMENT
+
 fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 "transAtt MyOCL.AGE = MySQL.AGE" |
 "transAtt MyOCL.EMAIL = MySQL.EMAIL"
 
+(* COMMENT
 fun transAs :: "MyOCL.as \<Rightarrow> MySQL.col" where
 "transAs MyOCL.STUDENTS = MySQL.STUDENTS" |
 "transAs MyOCL.LECTURERS = MySQL.LECTURERS"
@@ -104,10 +105,12 @@ COMMENT *)
 
 fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "eval (MyOCL.Int i) om = [VInt i]"
-| "eval (MyOCL.Var x) om = [VObj x]"
-(* COMMENT
+| "eval (MyOCL.Var x) om = [VObj x om]"
 | "eval (MyOCL.Eq e1 e2) om = [VBool (equalValList (eval e1 om) (eval e2 om))]" 
-| "eval (MyOCL.Att (Var v) att) om = projValList (Col (transAtt att)) [VObj v]"
+| "eval (MyOCL.Att (Var v) att) om = [(projValAtt att (VObj v om))]"
+
+(* COMMENT
+
 | "eval (MyOCL.As (Var v) as) om = extCol (VObj v) (transAs as) (getEnrollmentList om)"
 | "eval (MyOCL.Size exp) om = [VInt (sizeValList (eval exp om))]"
 | "eval (MyOCL.IsEmpty exp) om = [VBool (isEmptyValList (eval exp om))]"

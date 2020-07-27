@@ -5,6 +5,8 @@ begin
 type_synonym var = string
 type_synonym ivar = string
 datatype att = AGE | EMAIL
+
+
 datatype as = LECTURERS | STUDENTS
 datatype entity = PERSON
 
@@ -39,4 +41,13 @@ fun flatten :: "val \<Rightarrow> val list" where
 "flatten (VList vs) = vs" 
 
 COMMENT *)
+
+(* projVal: given a column-expression and a row --either in person or enrollment table--,
+it returns the corresonding value *)
+
+fun projValAtt :: "att \<Rightarrow> val \<Rightarrow> val" where 
+"projValAtt AGE (VPerson (P page pemail)) = VInt page"
+| "projValAtt EMAIL (VPerson (P page pemail)) = VString pemail"
+| "projValAtt att (VObj var (OM [] es)) = VNULL"
+
 end

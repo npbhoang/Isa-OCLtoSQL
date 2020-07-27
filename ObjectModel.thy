@@ -12,6 +12,7 @@ datatype Enrollment = E Person Person
 datatype Objectmodel = OM "Person list" "Enrollment list"
 
 datatype val =  VNULL 
+  | VID Person
   | VInt nat 
   | VString string 
   | VBool bool 
@@ -20,7 +21,7 @@ datatype val =  VNULL
   | VList "val list"
   | TPerson Objectmodel
   | TEnrollment Objectmodel
-  | VObj string
+  | VObj string Objectmodel
   | VIVar string
   | VJoin "val list"
 
@@ -30,17 +31,19 @@ fun getPersonList :: "Objectmodel \<Rightarrow> Person list" where
 
 fun getEnrollmentList :: "Objectmodel \<Rightarrow> Enrollment list" where
 "getEnrollmentList (OM ps es) = es"
+*)
 
-fun mapPersonListToValList :: "Person list \<Rightarrow> val list" where
-"mapPersonListToValList [] = []" |
-"mapPersonListToValList (p#ps) = (VPerson p)#(mapPersonListToValList ps)"
-
+(*
 fun mapEnrollmentToValList :: "Enrollment list \<Rightarrow> val list" where
 "mapEnrollmentToValList [] = []" |
 "mapEnrollmentToValList (e#es) = (VEnrollment e)#(mapEnrollmentToValList es)"
 
+
+*)
+
 fun equalVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
 "equalVal v1 v2 = (v1 = v2)"
+
 
 fun equalValList :: "val list \<Rightarrow> val list \<Rightarrow> bool"
 where
@@ -49,6 +52,7 @@ where
 | "equalValList e1 Nil = False"
 | "equalValList (e1#e1s) (e2#e2s) = ((equalVal e1 e2) \<and> (equalValList e1s e2s))"
 
+(*
 fun greaterThanVal :: "val \<Rightarrow> val \<Rightarrow> bool" where
  "greaterThanVal (VInt i1) (VInt i2) = (i1 > i2)" 
 

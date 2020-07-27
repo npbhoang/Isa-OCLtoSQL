@@ -10,14 +10,66 @@ lemma (* self \<equiv> SELECT self *)
 "OCL2PSQL (eval (MyOCL.Var self) om) = exec (Select (MySQL.Var self)) (map om)"
 by simp
 
-(* COMMENT
 (* self = caller \<equiv> SELECT self = caller *)
-theorem "eval (MyOCL.Eq (MyOCL.Var self) (MyOCL.Var caller)) om 
-= exec (Select (MySQL.Eq (MySQL.Var self) (MySQL.Var caller))) om"
+theorem "OCL2PSQL (eval (MyOCL.Eq (MyOCL.Var self) (MyOCL.Var caller)) om) 
+= exec (Select (MySQL.Eq (MySQL.Var self) (MySQL.Var caller))) (map om)"
 proof -
   show ?thesis by simp      
-qed     
+qed    
 
+fun getRowById :: "SQLPerson list \<Rightarrow> pid \<Rightarrow> row" where
+"getRowById [] pid = (RTuple [(Pair MySQL.PNULL RNULL)])"
+| "getRowById (p#ps) pid = (if (getIdSQLPerson p = pid) 
+then (RTuple [(Pair MySQL.PSTRING (RID (getIdSQLPerson p)))
+, (Pair MySQL.PINT (RInt (getAgeSQLPerson p)))
+, (Pair MySQL.PSTRING (RString (getEmailSQLPerson p)))]) 
+else (getRowById ps pid))"
+
+(* Because ID is PRIMARY KEY. To prove it, the definition of filterWhere
+needs to reflect this fact *)
+lemma [simp] : "filterWhere (mapPersonListToRowList (getSQLPersonList (MySQL.map om))) (WHERE (exp.Eq (Col col.ID) (exp.Var self))) 
+= [(getRowById (getSQLPersonList (MySQL.map om)) (IDVar self))]"
+  sorry
+
+(* REMARK UNO *)
+lemma [simp] : "valToCol (projValAtt att.AGE (VObj self om))
+= snd (getColumn col.AGE (getRowById (getSQLPersonList (MySQL.map om)) (IDVar self)))"
+proof (induct om)
+  case (OM x1a x2a)
+  then show ?case
+  proof (induct x1a)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a x1a)
+    then show ?case sorry
+  qed
+qed
+
+
+fun stripAliasCell :: "(col*column) list \<Rightarrow> (col*column) list" where
+"stripAliasCell [] = []"
+| "stripAliasCell (c#cs) = (Pair PTOP (snd c))#(stripAliasCell cs)"
+
+fun stripAliasRow :: "row \<Rightarrow> row" where
+"stripAliasRow (RTuple as) = RTuple (stripAliasCell as)"
+
+fun stripAlias :: "row list \<Rightarrow> row list" where
+"stripAlias [] = []"
+| "stripAlias (r#rs) = (stripAliasRow r)#(stripAlias rs)"
+
+theorem "stripAlias (OCL2PSQL (eval (MyOCL.Att (MyOCL.Var self) (MyOCL.AGE)) om))    
+= stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.AGE)) (Table MySQL.PERSON) 
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) (map om))"
+  by auto
+
+ (* REMARK DOS --- TO BE PROVED *)
+theorem "stripAlias (OCL2PSQL (eval (MyOCL.As (MyOCL.Var self) (MyOCL.LECTURERS)) om))    
+= stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.LECTURERS)) (Table MySQL.ENROLLMENT) 
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (map om))"
+  sorry
+
+(* COMMENT
 (* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)
 theorem "eval (MyOCL.Eq (MyOCL.Att (MyOCL.Var self) MyOCL.AGE) (MyOCL.Int 30)) om
 = exec (SelectFromWhere (MySQL.Eq (MySQL.Col (MySQL.AGE)) (MySQL.Int 30))
@@ -29,6 +81,8 @@ from this have "(mapPersonListToValList ps) = [TPerson (OM ps es)]"
 using TPersonToValList by simp
 then show ?case by simp
 qed  
+
+
 
 (* self.lecturers \<equiv> SELECT lecturers FROM Enrollment WHERE students = self *)
 theorem "eval (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS) om
