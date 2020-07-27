@@ -4,7 +4,7 @@ begin
 
 type_synonym var = string
 
-datatype pid = ID Person
+datatype pid = ID Person | IDVar var
 
 datatype SQLPerson = SQLP pid nat string
 datatype SQLEnrollment = SQLE pid pid
@@ -28,11 +28,27 @@ fun mapAssociationLinkList :: "Enrollment list \<Rightarrow> SQLEnrollment list"
 fun map :: "Objectmodel \<Rightarrow> SQLObjectmodel" where
 "map (OM ps es) = SQLOM (mapEntityObjectList ps) (mapAssociationLinkList es)"
 
+datatype row = RNULL
+| RInt nat
+| RString string
+| RBool bool
+| RID pid
+| RTuple "row list"
+
+fun valToRow :: "val \<Rightarrow> row" where
+"valToRow (VInt i) = (RInt i)"
+| "valToRow (VPerson p) = RID (ID p)"
+| "valToRow (VObj var) = RID (IDVar var)"
+
+fun OCL2PSQL :: "val list \<Rightarrow> row list" where
+"OCL2PSQL [] = []" 
+| "OCL2PSQL (val#list) = (valToRow val)#(OCL2PSQL list)"
+
 datatype table = PERSON | ENROLLMENT
 datatype col = AGE | EMAIL | ID | LECTURERS | STUDENTS
 
 datatype exp = Int nat 
-  | Var var 
+| Var var 
   | Eq exp exp
   | GrtThan exp exp
   | And exp exp
@@ -51,7 +67,7 @@ datatype SQLstm = Select exp
   | SelectFromWhere exp fromItem whereClause 
   | SelectFromJoin exp fromItem joinClause
 
-
+(* COMMENT
 fun opposite :: "col \<Rightarrow> col" where
 "opposite STUDENTS = LECTURERS"
   | "opposite LECTURERS = STUDENTS"
@@ -80,23 +96,26 @@ fun projValList :: "exp \<Rightarrow> val list \<Rightarrow> val list" where
 "projValList exp Nil = Nil"
 | "projValList exp (v#vs) = (projVal exp v)#(projValList exp vs)"
 
+COMMENT *)
 
 (* select: given a value --either a person or an enrollment--
 and an expression, it returns the value that correspond to
 evaluat the expression for exactly that value (the only relevant
 cases are var and columns ---i.e., either attributes or association-ends) *)
-fun select :: "val \<Rightarrow> exp \<Rightarrow> val" where
-"select val (MySQL.Int i) = VInt i"
-| "select val (MySQL.Var v) = VObj v"
-| "select val (Col col) = projVal (Col col) val"
+fun select :: "row \<Rightarrow> exp \<Rightarrow> row" where
+"select row (MySQL.Int i) = RInt i"
+| "select row (MySQL.Var v) = (RID (IDVar v))"
+(*
+| "select row (Col col) = projVal (Col col) val"
 | "select val (Eq e1 e2) = VBool (equalVal (select val e1) (select val e2))"
 | "select val (GrtThan e1 e2) = VBool (greaterThanVal (select val e1) (select val e2))"
 | "select val (And e1 e2) = VBool (andVal (select val e1) (select val e2))"
-
+*)
 (* filterEnrollments: given an expression and an enrollment list,
 it filter out the enrollment list based on the result of the expression
 for each enrollment *)
 
+(* COMMENT
 fun filterEnrollments :: "exp \<Rightarrow> Enrollment list \<Rightarrow> val list" where
 "filterEnrollments exp Nil = Nil"
 | "filterEnrollments exp (e#es) = (if (isTrueVal (select (VEnrollment e) exp)) 
@@ -270,11 +289,14 @@ fun joinValListWithValList :: "val list \<Rightarrow> val list \<Rightarrow> exp
 = (joinValWithValList val1 valList2 exp)
 @(joinValListWithValList valList1 valList2 exp)"
 
+COMMENT *)
+
 (* exec: this is the key function: given a SQL-expression and and object
 model it returns a list of values. Notice that we keep the original
 table-type-name to be sued in selectlist *)
-fun exec :: "SQLstm \<Rightarrow> Objectmodel \<Rightarrow> val list" where
-"exec (Select selitems) om  = [select VNULL selitems]"
+fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
+"exec (Select selitems) sqlom = [select RNULL selitems]"
+(* COMMENT
 | "exec (SelectFrom exp (Table ENROLLMENT)) (OM ps es) 
     = selectList (mapEnrollmentToValList es) exp"
 | "exec (SelectFrom exp (Table PERSON)) (OM ps es) 
@@ -285,5 +307,5 @@ fun exec :: "SQLstm \<Rightarrow> Objectmodel \<Rightarrow> val list" where
     = selectList (filterWhere (mapPersonListToValList ps) whereExp) exp"
 | "exec (SelectFromJoin exp (Table ENROLLMENT) (JOIN (Table PERSON) onExp)) (OM ps es)
 = selectList (joinValListWithValList (mapEnrollmentToValList es) (mapPersonListToValList ps) onExp) exp"
-
+COMMENT *)
 end

@@ -24,6 +24,7 @@ datatype OCLexp = Int nat
   | PEAs OCLexp "Enrollment list"
   | AllInstances entity
 
+(* COMMENT
 fun partialEval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> OCLexp" where
 "partialEval (MyOCL.Int i) om = (MyOCL.Int i)"
 | "partialEval (MyOCL.Var x) om = (MyOCL.Var x)"
@@ -37,4 +38,5 @@ fun partialEval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> OCLexp" where
 fun flatten :: "val \<Rightarrow> val list" where
 "flatten (VList vs) = vs" 
 
+COMMENT *)
 end

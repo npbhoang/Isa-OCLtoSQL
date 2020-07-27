@@ -24,6 +24,7 @@ datatype val =  VNULL
   | VIVar string
   | VJoin "val list"
 
+  (* COMMENT
 fun getPersonList :: "Objectmodel \<Rightarrow> Person list" where
 "getPersonList (OM ps es) = ps"
 
@@ -91,4 +92,5 @@ fun isEmptyVal :: "val \<Rightarrow> bool" where
 fun isTrueVal :: "val \<Rightarrow> bool" where
 "isTrueVal (VBool val) = val"
 
+COMMENT *)
 end

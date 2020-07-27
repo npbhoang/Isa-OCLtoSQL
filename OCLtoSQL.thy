@@ -1,7 +1,7 @@
 theory OCLtoSQL
 imports Main MySQL MyOCL
 begin
-
+(* COMMENT
 fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 "transAtt MyOCL.AGE = MySQL.AGE" |
 "transAtt MyOCL.EMAIL = MySQL.EMAIL"
@@ -100,9 +100,12 @@ fun collectAux :: "val list \<Rightarrow> OCLexp \<Rightarrow> Enrollment \<Righ
 @(collectAux vs  (As (IVar p) col) e)"
 *)
 
+COMMENT *)
+
 fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "eval (MyOCL.Int i) om = [VInt i]"
 | "eval (MyOCL.Var x) om = [VObj x]"
+(* COMMENT
 | "eval (MyOCL.Eq e1 e2) om = [VBool (equalValList (eval e1 om) (eval e2 om))]" 
 | "eval (MyOCL.Att (Var v) att) om = projValList (Col (transAtt att)) [VObj v]"
 | "eval (MyOCL.As (Var v) as) om = extCol (VObj v) (transAs as) (getEnrollmentList om)"
@@ -113,8 +116,9 @@ fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 | "eval (MyOCL.Collect src v body) om = collect (eval src om) v (partialEval body om)"
 | "eval (MyOCL.CollectPlus src v body) om = collectPlus (eval src om) v (partialEval body om)"
 
+
 fun translate :: "OCLexp \<Rightarrow> MySQL.exp" where
 "translate (MyOCL.Int i) = MySQL.Int i" |
 "translate (Att (IVar p) att) = MySQL.Col (transAtt att)"
-
+COMMENT *)
 end

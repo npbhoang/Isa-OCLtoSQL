@@ -2,6 +2,15 @@ theory MyMain
   imports Main MyOCL MySQL OCLtoSQL
   begin 
 
+lemma (* 1 \<equiv> SELECT 1 *)
+"OCL2PSQL (eval (MyOCL.Int i) om) = exec (Select (MySQL.Int i)) (map om)"
+by simp
+
+lemma (* self \<equiv> SELECT self *)
+"OCL2PSQL (eval (MyOCL.Var self) om) = exec (Select (MySQL.Var self)) (map om)"
+by simp
+
+(* COMMENT
 (* self = caller \<equiv> SELECT self = caller *)
 theorem "eval (MyOCL.Eq (MyOCL.Var self) (MyOCL.Var caller)) om 
 = exec (Select (MySQL.Eq (MySQL.Var self) (MySQL.Var caller))) om"
@@ -179,6 +188,6 @@ case (Cons a es)
 then show ?case using lem4 lem5 by simp
 qed
 qed
-
+COMMENT *)
 end
 
