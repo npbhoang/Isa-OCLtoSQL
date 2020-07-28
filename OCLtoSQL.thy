@@ -6,11 +6,10 @@ fun transAtt :: "MyOCL.att \<Rightarrow> MySQL.col" where
 "transAtt MyOCL.AGE = MySQL.AGE" |
 "transAtt MyOCL.EMAIL = MySQL.EMAIL"
 
-(* COMMENT
 fun transAs :: "MyOCL.as \<Rightarrow> MySQL.col" where
 "transAs MyOCL.STUDENTS = MySQL.STUDENTS" |
 "transAs MyOCL.LECTURERS = MySQL.LECTURERS"
-
+(* COMMENT
 fun evalWithCtx :: "OCLexp \<Rightarrow> OCLexp \<Rightarrow> val \<Rightarrow> val" where
 "evalWithCtx (MyOCL.Int x) (MyOCL.IVar i) val = VInt x"
 (* For the time being *)
@@ -48,14 +47,6 @@ termination evalWithCtx
 | "evalWithCtx (MyOCL.Exists src v body) var val
 = (evalWithCtx src var val)"
 *)
-(* FACT --- Due to the performance, the definition is put as lemma *)
-lemma [simp]: "evalWithCtx (PEAtt (MyOCL.Att (IVar v) att)) (MyOCL.IVar i) val
-= projVal (Col (transAtt att)) val"
-sorry
-(* FACT --- Due to the performance, the definition is put as lemma *)
-lemma [simp]: "evalWithCtx (PEAs (MyOCL.As (IVar v) as) es) (MyOCL.IVar i) val
-= VList (extCol val (transAs as) es)"
-sorry
 
 fun filterWithBody :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "filterWithBody Nil var (exp) = Nil" 
@@ -105,13 +96,12 @@ COMMENT *)
 
 fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "eval (MyOCL.Int i) om = [VInt i]"
-| "eval (MyOCL.Var x) om = [VObj x om]"
+| "eval (MyOCL.Var x) om = [VObj x]"
 | "eval (MyOCL.Eq e1 e2) om = [VBool (equalValList (eval e1 om) (eval e2 om))]" 
-| "eval (MyOCL.Att (Var v) att) om = [(projValAtt att (VObj v om))]"
+| "eval (MyOCL.Att (Var v) att) om = [(projValAtt att (VPerson (PVObj v)))]"
+| "eval (MyOCL.As (Var v) as) om = projValAs as (VObj v) (getEnrollmentList om)"
 
 (* COMMENT
-
-| "eval (MyOCL.As (Var v) as) om = extCol (VObj v) (transAs as) (getEnrollmentList om)"
 | "eval (MyOCL.Size exp) om = [VInt (sizeValList (eval exp om))]"
 | "eval (MyOCL.IsEmpty exp) om = [VBool (isEmptyValList (eval exp om))]"
 | "eval (MyOCL.Exists src v body) om = [VBool (\<not> isEmptyValList (filterWithBody (eval src om) v (partialEval body om)))]"

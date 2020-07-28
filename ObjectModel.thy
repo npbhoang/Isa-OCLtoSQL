@@ -5,7 +5,8 @@ begin
 (* Person (age, email) *)
 datatype Person = P nat string
   | PNULL (* An invalid Person *)
-
+  | PVObj string
+  
 (* Enrollment (students, lecturers) *)
 datatype Enrollment = E Person Person
 
@@ -21,17 +22,16 @@ datatype val =  VNULL
   | VList "val list"
   | TPerson Objectmodel
   | TEnrollment Objectmodel
-  | VObj string Objectmodel
+  | VObj string
   | VIVar string
   | VJoin "val list"
 
-  (* COMMENT
+
 fun getPersonList :: "Objectmodel \<Rightarrow> Person list" where
 "getPersonList (OM ps es) = ps"
 
 fun getEnrollmentList :: "Objectmodel \<Rightarrow> Enrollment list" where
 "getEnrollmentList (OM ps es) = es"
-*)
 
 (*
 fun mapEnrollmentToValList :: "Enrollment list \<Rightarrow> val list" where

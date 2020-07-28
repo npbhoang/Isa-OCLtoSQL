@@ -27,25 +27,9 @@ else (getRowById ps pid))"
 
 (* Because ID is PRIMARY KEY. To prove it, the definition of filterWhere
 needs to reflect this fact *)
-lemma [simp] : "filterWhere (mapPersonListToRowList (getSQLPersonList (MySQL.map om))) (WHERE (exp.Eq (Col col.ID) (exp.Var self))) 
+lemma lem1: "filterWhere (mapPersonListToRowList (getSQLPersonList (MySQL.map om))) (WHERE (exp.Eq (Col col.ID) (exp.Var self))) 
 = [(getRowById (getSQLPersonList (MySQL.map om)) (IDVar self))]"
-  sorry
-
-(* REMARK UNO *)
-lemma [simp] : "valToCol (projValAtt att.AGE (VObj self om))
-= snd (getColumn col.AGE (getRowById (getSQLPersonList (MySQL.map om)) (IDVar self)))"
-proof (induct om)
-  case (OM x1a x2a)
-  then show ?case
-  proof (induct x1a)
-    case Nil
-    then show ?case by simp
-  next
-    case (Cons a x1a)
-    then show ?case sorry
-  qed
-qed
-
+sorry
 
 fun stripAliasCell :: "(col*column) list \<Rightarrow> (col*column) list" where
 "stripAliasCell [] = []"
@@ -58,16 +42,69 @@ fun stripAlias :: "row list \<Rightarrow> row list" where
 "stripAlias [] = []"
 | "stripAlias (r#rs) = (stripAliasRow r)#(stripAlias rs)"
 
+lemma remarkUno : "getRowById (getSQLPersonList (MySQL.map om)) (IDVar self)
+= RTuple [
+(Pair MySQL.ID (RID (IDVar self))),
+(Pair MySQL.AGE (RInt (getAgePerson (PVObj self)))),
+(Pair MySQL.EMAIL (RString (getEmailPerson (PVObj self))))
+]"
+sorry
+
 theorem "stripAlias (OCL2PSQL (eval (MyOCL.Att (MyOCL.Var self) (MyOCL.AGE)) om))    
 = stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.AGE)) (Table MySQL.PERSON) 
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) (map om))"
-  by auto
+apply auto
+apply (simp add: lem1 remarkUno)
+done
 
- (* REMARK DOS --- TO BE PROVED *)
+fun getRowByAssociationEnd :: "col \<Rightarrow> SQLEnrollment list \<Rightarrow> pid \<Rightarrow> row list" where
+"getRowByAssociationEnd col [] pid = []"
+| "getRowByAssociationEnd col.STUDENTS (e#es) pid = (if ((getForeignKey col.STUDENTS e) = pid) 
+then (RTuple [(Pair MySQL.PSTRING (RID (getForeignKey col.STUDENTS e))), 
+(Pair MySQL.PSTRING (RID (getForeignKey col.LECTURERS e)))])#(getRowByAssociationEnd col.STUDENTS es pid) 
+else (getRowByAssociationEnd col.STUDENTS es pid))"
+
+(* Because ID is PRIMARY KEY. To prove it, the definition of filterWhere
+needs to reflect this fact *)
+lemma lem2: "filterWhere (mapEnrollmentListToRowList (getSQLEnrollmentList (MySQL.map om))) 
+(WHERE (exp.Eq (Col col.STUDENTS) (exp.Var self)))
+= (getRowByAssociationEnd col.STUDENTS (getSQLEnrollmentList (MySQL.map om)) (IDVar self))"
+sorry
+
+
+lemma lem3: "getForeignKey col.STUDENTS (mapAssociationLink e) = IDVar self
+\<Longrightarrow> getAssociationEnd as.STUDENTS e = PVObj self"
+sorry
+
+lemma lem4: "getAssociationEnd as.STUDENTS e = PVObj self
+\<Longrightarrow> getForeignKey col.STUDENTS (mapAssociationLink e) = IDVar self"
+sorry
+
+lemma remarkDos: "getForeignKey col.LECTURERS (mapAssociationLink e) =
+PID (getAssociationEnd as.LECTURERS e)"
+sorry
+
 theorem "stripAlias (OCL2PSQL (eval (MyOCL.As (MyOCL.Var self) (MyOCL.LECTURERS)) om))    
 = stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.LECTURERS)) (Table MySQL.ENROLLMENT) 
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (map om))"
-  sorry
+proof (induct om)
+case (OM ps es)
+then show ?case 
+proof (induct es)
+case Nil
+then show ?case by simp
+next
+case (Cons e es)
+then show ?case
+  apply auto
+  apply (simp add: lem2 remarkDos)
+  apply (simp add: lem4)
+  apply (simp add: lem3)
+  done
+qed
+qed
+
+
 
 (* COMMENT
 (* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)

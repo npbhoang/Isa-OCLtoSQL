@@ -11,23 +11,6 @@ datatype SQLEnrollment = SQLE pid pid
 
 datatype SQLObjectmodel = SQLOM "SQLPerson list" "SQLEnrollment list"
 
-fun mapEntityObject :: "Person \<Rightarrow> SQLPerson" where
-"mapEntityObject (P age email) = (SQLP (PID (P age email)) age email)"
-
-fun mapAssociationLink :: "Enrollment \<Rightarrow> SQLEnrollment" where
-"mapAssociationLink (E e1 e2) = (SQLE (PID e1) (PID e2))"
-
-fun mapEntityObjectList :: "Person list \<Rightarrow> SQLPerson list" where
-"mapEntityObjectList [] = []"
-(*| "mapEntityObjectList (p#ps) = (mapEntityObject p)#(mapEntityObjectList ps)"
-*)
-fun mapAssociationLinkList :: "Enrollment list \<Rightarrow> SQLEnrollment list" where
-"mapAssociationLinkList [] = []"
-| "mapAssociationLinkList (e#es) = (mapAssociationLink e)#(mapAssociationLinkList es)"
-
-fun map :: "Objectmodel \<Rightarrow> SQLObjectmodel" where
-"map (OM ps es) = SQLOM (mapEntityObjectList ps) (mapAssociationLinkList es)"
-
 datatype column = RNULL
 | RInt nat
 | RString string
@@ -42,6 +25,9 @@ datatype row = RTuple "(col * column) list"
 fun getSQLPersonList :: "SQLObjectmodel \<Rightarrow> SQLPerson list" where
 "getSQLPersonList (SQLOM ps es) = ps"
 
+fun getSQLEnrollmentList :: "SQLObjectmodel \<Rightarrow> SQLEnrollment list" where
+"getSQLEnrollmentList (SQLOM ps es) = es"
+
 fun getIdSQLPerson :: "SQLPerson \<Rightarrow> pid" where
 "getIdSQLPerson (SQLP personid age email) = personid"
 
@@ -51,23 +37,40 @@ fun getAgeSQLPerson :: "SQLPerson \<Rightarrow> nat" where
 fun getEmailSQLPerson :: "SQLPerson \<Rightarrow> string" where
 "getEmailSQLPerson (SQLP personid age email) = email"
 
+fun mapSQLPersonToRow :: "SQLPerson \<Rightarrow> row" where
+"mapSQLPersonToRow p = RTuple [(Pair MySQL.ID (RID (getIdSQLPerson p)))]"
+
 fun mapPersonListToRowList :: "SQLPerson list \<Rightarrow> row list" where
 "mapPersonListToRowList [] = []" |
-"mapPersonListToRowList (p#ps) = RTuple [(Pair MySQL.ID (RID (getIdSQLPerson p)))]#(mapPersonListToRowList ps)"
+"mapPersonListToRowList (p#ps) = (mapSQLPersonToRow p)#(mapPersonListToRowList ps)"
+
+fun getForeignKey :: "col \<Rightarrow> SQLEnrollment \<Rightarrow> pid" where
+"getForeignKey STUDENTS (SQLE e1 e2) = e1"
+| "getForeignKey LECTURERS (SQLE e1 e2) = e2"
+
+fun mapEnrollmentToRow :: "SQLEnrollment \<Rightarrow> row" where
+"mapEnrollmentToRow e = RTuple [(Pair MySQL.STUDENTS (RID (getForeignKey STUDENTS e))), 
+(Pair MySQL.LECTURERS (RID (getForeignKey LECTURERS e)))]"
+
+fun mapEnrollmentListToRowList :: "SQLEnrollment list \<Rightarrow> row list" where
+"mapEnrollmentListToRowList [] = []" |
+"mapEnrollmentListToRowList (e#es) 
+= (mapEnrollmentToRow e)
+#(mapEnrollmentListToRowList es)"
 
 fun valToCol :: "val \<Rightarrow> column" where
 "valToCol VNULL = RNULL"
 | "valToCol (VInt i) = (RInt i)"
 | "valToCol (VPerson p) = RID (PID p)"
 | "valToCol (VBool b) = (RBool b)"
-| "valToCol (VObj var om) = RID (IDVar var)"
+| "valToCol (VObj var) = RID (IDVar var)"
 
 fun typeToCol :: "val \<Rightarrow> col" where
 "typeToCol (VInt i) = PINT"
 | "typeToCol (VString s) = PSTRING"
 | "typeToCol (VBool b) = PBOOL"
 | "typeToCol (VPerson p) = PSTRING"
-| "typeToCol (VObj var om) = PSTRING"
+| "typeToCol (VObj var) = PSTRING"
 
 fun OCL2PSQL :: "val list \<Rightarrow> row list" where
 "OCL2PSQL [] = []" 
@@ -93,17 +96,12 @@ datatype SQLstm = Select exp
   | SelectFromWhere exp fromItem whereClause 
   | SelectFromJoin exp fromItem joinClause
 
+  
+
 (* COMMENT
 fun opposite :: "col \<Rightarrow> col" where
 "opposite STUDENTS = LECTURERS"
   | "opposite LECTURERS = STUDENTS"
-
-
-fun getAssociationEnd :: "col \<Rightarrow> Enrollment \<Rightarrow> Person" where
-"getAssociationEnd STUDENTS (E students lecturers) = students"
-  | "getAssociationEnd LECTURERS (E students lecturers) = lecturers"
-
-
 
 (* projValList: given a  expression and a list of rows,
  it returns the list of values corresponding to calling projVal for each row in the given list *)
@@ -113,6 +111,23 @@ fun projValList :: "exp \<Rightarrow> val list \<Rightarrow> val list" where
 | "projValList exp (v#vs) = (projVal exp v)#(projValList exp vs)"
 
 COMMENT *)
+
+fun mapPersonToSQLPerson :: "Person \<Rightarrow> SQLPerson" where
+"mapPersonToSQLPerson (P age email) = (SQLP (PID (P age email)) age email)"
+
+fun mapEnrollmentToSQLEnrollment :: "Enrollment \<Rightarrow> SQLEnrollment" where
+"mapEnrollmentToSQLEnrollment (E e1 e2) = (SQLE (PID e1) (PID e2))"
+
+fun mapPersonListToSQLPersonList :: "Person list \<Rightarrow> SQLPerson list" where
+"mapPersonListToSQLPersonList [] = []"
+| "mapPersonListToSQLPersonList (p#ps) = (mapPersonToSQLPerson p)#(mapPersonListToSQLPersonList ps)"
+
+fun mapEnrollmentListToSQLEnrollmentList :: "Enrollment list \<Rightarrow> SQLEnrollment list" where
+"mapEnrollmentListToSQLEnrollmentList [] = []"
+| "mapEnrollmentListToSQLEnrollmentList (e#es) = (mapEnrollmentToSQLEnrollment e)#(mapEnrollmentListToSQLEnrollmentList es)"
+
+fun map :: "Objectmodel \<Rightarrow> SQLObjectmodel" where
+"map (OM ps es) = SQLOM (mapPersonListToSQLPersonList ps) (mapEnrollmentListToSQLEnrollmentList es)"
 
 (* select: given a value --either a person or an enrollment--
 and an expression, it returns the value that correspond to
@@ -243,8 +258,22 @@ fun selectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
 | "selectList (v#vs) (And e1 e2) = (select v (And e1 e2)) # (selectList vs (And e1 e2))"
 *)
 
-fun isSatisfied :: "row \<Rightarrow> exp \<Rightarrow> bool" where
-"isSatisfied row exp = undefined"
+fun isEqualID :: "pid \<Rightarrow> pid \<Rightarrow> bool" where
+"isEqualID (PID p1) (PID p2) = (p1 = p2)"
+| "isEqualID (IDVar var1) (IDVar var2) = (var1 = var2)"
+
+fun isSatisfiedColumn :: "column \<Rightarrow> exp \<Rightarrow> bool" where
+"isSatisfiedColumn (RID pid) (Var self) = isEqualID pid (IDVar self)"
+
+fun isSatisfiedColColumnList :: "(col*column) list \<Rightarrow> exp \<Rightarrow> bool" where
+"isSatisfiedColColumnList (c#cs) (Eq (Col col2) (Var self)) = 
+(if (fst c) = col2
+then (isSatisfiedColumn (snd c) (Var self))
+else (isSatisfiedColColumnList cs (Eq (Col col2) (Var self))))"
+
+fun isSatisfiedRow :: "row \<Rightarrow> exp \<Rightarrow> bool" where
+"isSatisfiedRow (RTuple cs) (Eq (Col col2) (Var self)) = 
+isSatisfiedColColumnList cs (Eq (Col col2) (Var self))"
 
 (* 
 filterWhere: given a list of values --- currently, either the original Person table or
@@ -253,27 +282,15 @@ the original Enrollment table --- and a where-clause, it returns the values that
 *)
 fun filterWhere :: "row list \<Rightarrow> whereClause \<Rightarrow> row list" where
 "filterWhere [] exp =  []"
-| "filterWhere (row#rows) (WHERE exp)
-= (if (isSatisfied row exp) 
-  then (row#filterWhere rows (WHERE exp)) 
-  else (filterWhere rows (WHERE exp)))"
+| "filterWhere (r#rs) (WHERE (Eq (Col col2) (Var self)))
+= (if isSatisfiedRow r (Eq (Col col2) (Var self)) 
+  then (r#filterWhere rs (WHERE (Eq (Col col2) (Var self)))) 
+  else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"
+
 (*
 | "filterWhere [TEnrollment (OM ps es)] (WHERE (And e1 e2))
 = filterEnrollments (And e1 e2) es"
 *)
-
-(*
-(* FACT: Given the valid table Person, if the where-clause is of the form
----Person_id = var--- then it returns exactly one Person, which is the VObj var itself *)
-lemma [simp]: "filterWhere [TPerson (OM ps es)] (WHERE (Eq (Col ID) (Var var))) = [VObj var]"
-sorry
-
-(* FACT: Given the valid table Enrollment, if the where-clause is either of the form
----LECTURERS = var or STUDENTS = var--- then it returns exactly 
-the list of Enrollments such that either the (VObj var) is the STUDENTS or the LECTURERS *)
-lemma [simp]: "filterWhere [TEnrollment (OM ps es)] (WHERE (Eq (Col col) (Var var)))
-= extEnrollments (VObj var) col es"
-sorry
 
 
 (* This is to be discussed, completed later, when dealing with Subselect
@@ -282,6 +299,7 @@ sorry
     else filterWhere vs (WHERE e))"
 *)
 
+(* COMMENT
 lemma TPersonToValList: "[TPerson (OM ps es)] = mapPersonListToValList ps"
 sorry
 
@@ -341,6 +359,8 @@ fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
 "exec (Select selitems) sqlom = [select (RTuple [(Pair PNULL RNULL)]) selitems]"
 | "exec (SelectFromWhere exp (Table PERSON) whereExp) sqlom
     = selectList (filterWhere (mapPersonListToRowList (getSQLPersonList sqlom)) whereExp) exp"
+| "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) sqlom
+    = selectList (filterWhere (mapEnrollmentListToRowList (getSQLEnrollmentList sqlom)) whereExp) exp"    
 (* COMMENT
 | "exec (SelectFrom exp (Table ENROLLMENT)) (OM ps es) 
     = selectList (mapEnrollmentToValList es) exp"
