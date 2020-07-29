@@ -45,11 +45,6 @@ COMMENT *)
 (* projVal: given a column-expression and a row --either in person or enrollment table--,
 it returns the corresonding value *)
 
-fun getAgePerson :: "Person \<Rightarrow> nat" where
-"getAgePerson (P age email) = age"
-
-fun getEmailPerson :: "Person \<Rightarrow> string" where
-"getEmailPerson (P age email) = email"
 
 fun projValAtt :: "att \<Rightarrow> val \<Rightarrow> val" where 
 "projValAtt AGE (VPerson p) = VInt (getAgePerson p)"
@@ -61,10 +56,12 @@ fun getAssociationEnd :: "as \<Rightarrow> Enrollment \<Rightarrow> Person" wher
 
 fun projValAs :: "as \<Rightarrow> val \<Rightarrow> Enrollment list \<Rightarrow> val list" where
 "projValAs LECTURERS (VObj var) [] = []"
-| "projValAs LECTURERS (VObj var) (e#es) = 
+(*| "projValAs LECTURERS (VObj var) (e#es) = 
 (if (getAssociationEnd STUDENTS e) = (PVObj var)
 then ((VPerson (getAssociationEnd LECTURERS e))#(projValAs LECTURERS (VObj var) es))
 else (projValAs LECTURERS (VObj var) es))"
+*)
+
 (*
 "projValAs LECTURERS (VPerson p) [] = []"
 | "projValAs LECTURERS (VPerson p) (e#es) = 

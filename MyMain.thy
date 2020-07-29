@@ -17,20 +17,6 @@ proof -
   show ?thesis by simp      
 qed    
 
-fun getRowById :: "SQLPerson list \<Rightarrow> pid \<Rightarrow> row" where
-"getRowById [] pid = (RTuple [(Pair MySQL.PNULL RNULL)])"
-| "getRowById (p#ps) pid = (if (getIdSQLPerson p = pid) 
-then (RTuple [(Pair MySQL.PSTRING (RID (getIdSQLPerson p)))
-, (Pair MySQL.PINT (RInt (getAgeSQLPerson p)))
-, (Pair MySQL.PSTRING (RString (getEmailSQLPerson p)))]) 
-else (getRowById ps pid))"
-
-(* Because ID is PRIMARY KEY. To prove it, the definition of filterWhere
-needs to reflect this fact *)
-lemma lem1: "filterWhere (mapPersonListToRowList (getSQLPersonList (MySQL.map om))) (WHERE (exp.Eq (Col col.ID) (exp.Var self))) 
-= [(getRowById (getSQLPersonList (MySQL.map om)) (IDVar self))]"
-sorry
-
 fun stripAliasCell :: "(col*column) list \<Rightarrow> (col*column) list" where
 "stripAliasCell [] = []"
 | "stripAliasCell (c#cs) = (Pair PTOP (snd c))#(stripAliasCell cs)"
@@ -42,20 +28,44 @@ fun stripAlias :: "row list \<Rightarrow> row list" where
 "stripAlias [] = []"
 | "stripAlias (r#rs) = (stripAliasRow r)#(stripAlias rs)"
 
-lemma remarkUno : "getRowById (getSQLPersonList (MySQL.map om)) (IDVar self)
-= RTuple [
-(Pair MySQL.ID (RID (IDVar self))),
-(Pair MySQL.AGE (RInt (getAgePerson (PVObj self)))),
-(Pair MySQL.EMAIL (RString (getEmailPerson (PVObj self))))
-]"
-sorry
+fun valid :: "string \<Rightarrow> Person list \<Rightarrow> bool" where
+"valid s [] = False"
+| "valid s (p#ps) = (if (s = (getIdPerson p)) then True else (valid s ps))"
 
-theorem "stripAlias (OCL2PSQL (eval (MyOCL.Att (MyOCL.Var self) (MyOCL.AGE)) om))    
+lemma [simp]: "getIdSQLPerson (mapPersonToSQLPerson a) = PID (getIdPerson a)"
+proof (induct a)
+  case (P pid page pemail)
+  then show ?case by simp
+next
+  case PNULL
+  then show ?case by simp
+qed
+
+lemma [simp]: "getAgeSQLPerson (mapPersonToSQLPerson a) = getAgePerson a"
+proof (induct a)
+  case (P pid page pemail)
+  then show ?case by simp
+next
+  case PNULL
+  then show ?case by simp
+qed 
+
+theorem "(valid self (getPersonList om)) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (MyOCL.Att (MyOCL.Var self) (MyOCL.AGE)) om))    
 = stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.AGE)) (Table MySQL.PERSON) 
-(WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) (map om))"
-apply auto
-apply (simp add: lem1 remarkUno)
-done
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) (map om)))"
+  apply auto
+proof (induct om)
+  case (OM x1a x2a)
+  then show ?case 
+  proof (induct x1a)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a x1a)
+    then show ?case by simp
+  qed
+qed
+
 
 fun getRowByAssociationEnd :: "col \<Rightarrow> SQLEnrollment list \<Rightarrow> pid \<Rightarrow> row list" where
 "getRowByAssociationEnd col [] pid = []"

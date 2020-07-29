@@ -28,19 +28,31 @@ fun getPersonTable :: "CoolObjectmodel \<Rightarrow> row list" where
 value " isSatisfiedColColumnList [(ID, RID (PID p)), (col.AGE, RInt (getAgePerson p)), (col.EMAIL, RString (getEmailPerson p))]
  (exp.Eq (Col ID) (exp.Var self))"
 
-lemma lem7: "ps \<noteq> [] \<Longrightarrow> filterWhere (getPersonTable (mapCool (OM ps es))) (WHERE (exp.Eq (Col col.ID) (exp.Var self)))
+lemma lem7: "filterWhere (getPersonTable (mapCool (OM ps es))) (WHERE (exp.Eq (Col col.ID) (exp.Var self)))
 = ([RTuple [
 (Pair MySQL.ID (RID (IDVar self))),
 (Pair MySQL.AGE (RInt (getAgePerson (PVObj self)))),
 (Pair MySQL.EMAIL (RString (getEmailPerson (PVObj self))))
 ]])"
+
+  value " filterWhere (getPersonTable (mapCool (OM (a # ps) es))) (WHERE (exp.Eq (Col ID) (exp.Var self)))"
+
 proof (induct ps)
   case Nil
-  then show ?case by simp
+  then show ?case sorry
 next
   case (Cons a ps)
-  then show ?case
-  apply auto
+  then show ?case 
+  proof (cases "isEqualID (PID a) (IDVar self)")
+case True
+then show ?thesis by simp
+next
+  case False
+then show ?thesis sorry
+qed
+ 
+
+     
 qed
 
 

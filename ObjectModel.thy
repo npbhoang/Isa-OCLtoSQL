@@ -3,9 +3,8 @@ imports Main
 begin
 
 (* Person (age, email) *)
-datatype Person = P nat string
+datatype Person = P string nat string
   | PNULL (* An invalid Person *)
-  | PVObj string
   
 (* Enrollment (students, lecturers) *)
 datatype Enrollment = E Person Person
@@ -51,6 +50,19 @@ where
 | "equalValList Nil e2 = False"
 | "equalValList e1 Nil = False"
 | "equalValList (e1#e1s) (e2#e2s) = ((equalVal e1 e2) \<and> (equalValList e1s e2s))"
+
+
+fun getIdPerson :: "Person \<Rightarrow> string" where
+"getIdPerson (P pid page pemail) = pid"
+| "getIdPerson PNULL = undefined"
+
+fun getAgePerson :: "Person \<Rightarrow> nat" where
+"getAgePerson (P pid age email) = age"
+| "getAgePerson PNULL = undefined"
+
+fun getEmailPerson :: "Person \<Rightarrow> string" where
+"getEmailPerson (P pid age email) = email"
+| "getEmailPerson PNULL = undefined"
 
 (*
 fun greaterThanVal :: "val \<Rightarrow> val \<Rightarrow> bool" where

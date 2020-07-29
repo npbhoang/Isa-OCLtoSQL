@@ -4,9 +4,9 @@ begin
 
 type_synonym var = string
 
-datatype pid = PID Person | IDVar var
+datatype pid = PID string | IDVar var
 
-datatype SQLPerson = SQLP pid nat string
+datatype SQLPerson = SQLP pid nat string | SQLPNULL
 datatype SQLEnrollment = SQLE pid pid
 
 datatype SQLObjectmodel = SQLOM "SQLPerson list" "SQLEnrollment list"
@@ -30,15 +30,22 @@ fun getSQLEnrollmentList :: "SQLObjectmodel \<Rightarrow> SQLEnrollment list" wh
 
 fun getIdSQLPerson :: "SQLPerson \<Rightarrow> pid" where
 "getIdSQLPerson (SQLP personid age email) = personid"
+| "getIdSQLPerson SQLPNULL = PID undefined"
 
 fun getAgeSQLPerson :: "SQLPerson \<Rightarrow> nat" where
 "getAgeSQLPerson (SQLP personid age email) = age"
+| "getAgeSQLPerson SQLPNULL = undefined"
 
 fun getEmailSQLPerson :: "SQLPerson \<Rightarrow> string" where
 "getEmailSQLPerson (SQLP personid age email) = email"
+| "getEmailSQLPerson SQLPNULL = undefined"
 
 fun mapSQLPersonToRow :: "SQLPerson \<Rightarrow> row" where
-"mapSQLPersonToRow p = RTuple [(Pair MySQL.ID (RID (getIdSQLPerson p)))]"
+"mapSQLPersonToRow p = RTuple [
+(Pair MySQL.ID (RID (getIdSQLPerson p))),
+(Pair MySQL.AGE (RInt (getAgeSQLPerson p))),
+(Pair MySQL.EMAIL (RString (getEmailSQLPerson p)))
+]"
 
 fun mapPersonListToRowList :: "SQLPerson list \<Rightarrow> row list" where
 "mapPersonListToRowList [] = []" |
@@ -61,7 +68,7 @@ fun mapEnrollmentListToRowList :: "SQLEnrollment list \<Rightarrow> row list" wh
 fun valToCol :: "val \<Rightarrow> column" where
 "valToCol VNULL = RNULL"
 | "valToCol (VInt i) = (RInt i)"
-| "valToCol (VPerson p) = RID (PID p)"
+| "valToCol (VPerson p) = RID (PID (getIdPerson p))"
 | "valToCol (VBool b) = (RBool b)"
 | "valToCol (VObj var) = RID (IDVar var)"
 
@@ -113,10 +120,11 @@ fun projValList :: "exp \<Rightarrow> val list \<Rightarrow> val list" where
 COMMENT *)
 
 fun mapPersonToSQLPerson :: "Person \<Rightarrow> SQLPerson" where
-"mapPersonToSQLPerson (P age email) = (SQLP (PID (P age email)) age email)"
+"mapPersonToSQLPerson (P pid age email) = (SQLP (PID pid) age email)"
+| "mapPersonToSQLPerson Person.PNULL = SQLPNULL"
 
 fun mapEnrollmentToSQLEnrollment :: "Enrollment \<Rightarrow> SQLEnrollment" where
-"mapEnrollmentToSQLEnrollment (E e1 e2) = (SQLE (PID e1) (PID e2))"
+"mapEnrollmentToSQLEnrollment (E e1 e2) = (SQLE (PID (getIdPerson e1)) (PID (getIdPerson e2)))"
 
 fun mapPersonListToSQLPersonList :: "Person list \<Rightarrow> SQLPerson list" where
 "mapPersonListToSQLPersonList [] = []"
@@ -261,6 +269,7 @@ fun selectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
 fun isEqualID :: "pid \<Rightarrow> pid \<Rightarrow> bool" where
 "isEqualID (PID p1) (PID p2) = (p1 = p2)"
 | "isEqualID (IDVar var1) (IDVar var2) = (var1 = var2)"
+| "isEqualID (PID p1) (IDVar var) = (p1 = var)"
 
 fun isSatisfiedColumn :: "column \<Rightarrow> exp \<Rightarrow> bool" where
 "isSatisfiedColumn (RID pid) (Var self) = isEqualID pid (IDVar self)"
@@ -275,16 +284,21 @@ fun isSatisfiedRow :: "row \<Rightarrow> exp \<Rightarrow> bool" where
 "isSatisfiedRow (RTuple cs) (Eq (Col col2) (Var self)) = 
 isSatisfiedColColumnList cs (Eq (Col col2) (Var self))"
 
+
 (* 
 filterWhere: given a list of values --- currently, either the original Person table or
 the original Enrollment table --- and a where-clause, it returns the values that satisfy 
 (select equals to true) the where-clause 
 *)
+(* This is a temporary hack: the special if-then-else only works for Person-table where
+ID is a primary key
+*)
+
 fun filterWhere :: "row list \<Rightarrow> whereClause \<Rightarrow> row list" where
 "filterWhere [] exp =  []"
 | "filterWhere (r#rs) (WHERE (Eq (Col col2) (Var self)))
 = (if isSatisfiedRow r (Eq (Col col2) (Var self)) 
-  then (r#filterWhere rs (WHERE (Eq (Col col2) (Var self)))) 
+  then (if (col2 = col.ID) then [r] else (r#filterWhere rs (WHERE (Eq (Col col2) (Var self)))))
   else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"
 
 (*
