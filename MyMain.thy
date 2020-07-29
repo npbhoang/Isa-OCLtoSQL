@@ -53,7 +53,6 @@ qed
 theorem "(valid self (getPersonList om)) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (MyOCL.Att (MyOCL.Var self) (MyOCL.AGE)) om))    
 = stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.AGE)) (Table MySQL.PERSON) 
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) (map om)))"
-  apply auto
 proof (induct om)
   case (OM x1a x2a)
   then show ?case 
@@ -67,89 +66,102 @@ proof (induct om)
 qed
 
 
-fun getRowByAssociationEnd :: "col \<Rightarrow> SQLEnrollment list \<Rightarrow> pid \<Rightarrow> row list" where
-"getRowByAssociationEnd col [] pid = []"
-| "getRowByAssociationEnd col.STUDENTS (e#es) pid = (if ((getForeignKey col.STUDENTS e) = pid) 
-then (RTuple [(Pair MySQL.PSTRING (RID (getForeignKey col.STUDENTS e))), 
-(Pair MySQL.PSTRING (RID (getForeignKey col.LECTURERS e)))])#(getRowByAssociationEnd col.STUDENTS es pid) 
-else (getRowByAssociationEnd col.STUDENTS es pid))"
+(* KEY THEOREM FOR MAPPING-ASSOCIATIONS *)
 
-(* Because ID is PRIMARY KEY. To prove it, the definition of filterWhere
-needs to reflect this fact *)
-lemma lem2: "filterWhere (mapEnrollmentListToRowList (getSQLEnrollmentList (MySQL.map om))) 
-(WHERE (exp.Eq (Col col.STUDENTS) (exp.Var self)))
-= (getRowByAssociationEnd col.STUDENTS (getSQLEnrollmentList (MySQL.map om)) (IDVar self))"
-sorry
-
-
-lemma lem3: "getForeignKey col.STUDENTS (mapAssociationLink e) = IDVar self
-\<Longrightarrow> getAssociationEnd as.STUDENTS e = PVObj self"
-sorry
-
-lemma lem4: "getAssociationEnd as.STUDENTS e = PVObj self
-\<Longrightarrow> getForeignKey col.STUDENTS (mapAssociationLink e) = IDVar self"
-sorry
-
-lemma remarkDos: "getForeignKey col.LECTURERS (mapAssociationLink e) =
-PID (getAssociationEnd as.LECTURERS e)"
-sorry
-
-theorem "stripAlias (OCL2PSQL (eval (MyOCL.As (MyOCL.Var self) (MyOCL.LECTURERS)) om))    
-= stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.LECTURERS)) (Table MySQL.ENROLLMENT) 
-(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (map om))"
-proof (induct om)
-case (OM ps es)
-then show ?case 
-proof (induct es)
-case Nil
-then show ?case by simp
-next
-case (Cons e es)
-then show ?case
-  apply auto
-  apply (simp add: lem2 remarkDos)
-  apply (simp add: lem4)
-  apply (simp add: lem3)
-  done
-qed
+lemma [simp] : "getForeignKey col.LECTURERS (mapEnrollmentToSQLEnrollment a) 
+= PID (getIdPerson (getAssociationEnd as.LECTURERS a)) "
+proof (induct a)
+  case (E p1 p2)
+  then show ?case by simp
 qed
 
+lemma [simp]: "getForeignKey col.STUDENTS (mapEnrollmentToSQLEnrollment a) = 
+PID (getIdPerson (getAssociationEnd as.STUDENTS a)) "
 
+proof (induct a)
+  case (E p1 p2)
+  then show ?case by simp
+qed
 
-(* COMMENT
-(* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)
-theorem "eval (MyOCL.Eq (MyOCL.Att (MyOCL.Var self) MyOCL.AGE) (MyOCL.Int 30)) om
-= exec (SelectFromWhere (MySQL.Eq (MySQL.Col (MySQL.AGE)) (MySQL.Int 30))
-(Table MySQL.PERSON)
-(WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) om" 
-proof (induct om)
-case (OM ps es)
-from this have "(mapPersonListToValList ps) = [TPerson (OM ps es)]" 
-using TPersonToValList by simp
-then show ?case by simp
-qed  
+(* ID IS UNIQUE *)
+lemma [simp]: "getIdPerson a = getIdPerson p \<Longrightarrow> a = p"
+  sorry
 
+lemma [simp]: "getIdPerson a \<noteq> getIdPerson p \<Longrightarrow> a \<noteq> p"
+  sorry
 
-
-(* self.lecturers \<equiv> SELECT lecturers FROM Enrollment WHERE students = self *)
-theorem "eval (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS) om
-= exec (SelectFromWhere (MySQL.Col MySQL.LECTURERS) 
-(Table ENROLLMENT)
-(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
-proof (induct om)
-case (OM ps es)
-from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
-using TEnrollmentToValList by simp
-then show ?case
-proof (induct es)
+lemma [simp]: "valid i ps ⟹ getIdPerson (getAssignedPerson i ps) = i"
+proof (induct ps)
   case Nil
   then show ?case by simp
 next
-  case (Cons a es)
+  case (Cons a ps)
   then show ?case by simp
 qed
+
+
+lemma [simp]: "valid (getIdPerson p) ps ⟹ getAssignedPerson (getIdPerson p) ps = p"
+proof (induct ps)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a ps)
+  then show ?case by simp
 qed
 
+theorem "(valid self (getPersonList om)) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (MyOCL.As (MyOCL.Var self) (MyOCL.LECTURERS)) om))    
+= stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.LECTURERS)) (Table MySQL.ENROLLMENT) 
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (map om)))"
+proof (induct om)
+  case (OM x1a x2a)
+  then show ?case
+  proof (induct x2a)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a x2a)
+    then show ?case by auto
+  qed
+qed
+
+
+(* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)
+theorem "(valid self (getPersonList om)) \<Longrightarrow> 
+(stripAlias (OCL2PSQL (eval (MyOCL.Eq 
+(MyOCL.Att (MyOCL.Var self) MyOCL.AGE) (MyOCL.Int 30)) om))
+= stripAlias( exec (SelectFromWhere (MySQL.Eq (MySQL.Col (MySQL.AGE)) (MySQL.Int 30))
+(Table MySQL.PERSON)
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) (map om)))" 
+proof (induct om)
+  case (OM ps es)
+  then show ?case 
+  proof (induct ps)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a ps)
+    then show ?case by simp
+  qed
+qed  
+
+(* self.lecturers \<equiv> SELECT lecturers FROM Enrollment WHERE students = self *)
+theorem "(valid self (getPersonList om)) \<Longrightarrow> (stripAlias(OCL2PSQL (eval (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS) om))
+= stripAlias (exec (SelectFromWhere (MySQL.Col MySQL.LECTURERS) 
+(Table ENROLLMENT)
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (map om)))"
+proof (induct om)
+  case (OM ps es)
+  then show ?case
+  proof (induct es)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a es)
+    then show ?case by simp
+  qed
+qed
+
+(* COMMENT
 (* self.lecturers\<rightarrow>size() \<equiv> SELECT COUNT *  FROM Enrollment WHERE students = self *)
 theorem "eval (MyOCL.Size (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
 = exec (SelectFromWhere (MySQL.Count MySQL.LECTURERS) 

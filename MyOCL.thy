@@ -55,12 +55,12 @@ fun getAssociationEnd :: "as \<Rightarrow> Enrollment \<Rightarrow> Person" wher
   | "getAssociationEnd LECTURERS (E students lecturers) = lecturers"
 
 fun projValAs :: "as \<Rightarrow> val \<Rightarrow> Enrollment list \<Rightarrow> val list" where
-"projValAs LECTURERS (VObj var) [] = []"
-(*| "projValAs LECTURERS (VObj var) (e#es) = 
-(if (getAssociationEnd STUDENTS e) = (PVObj var)
-then ((VPerson (getAssociationEnd LECTURERS e))#(projValAs LECTURERS (VObj var) es))
-else (projValAs LECTURERS (VObj var) es))"
-*)
+"projValAs LECTURERS (VPerson p) [] = []"
+| "projValAs LECTURERS (VPerson p) (e#es) = 
+(if (getAssociationEnd STUDENTS e) = p
+then ((VPerson (getAssociationEnd LECTURERS e))#(projValAs LECTURERS (VPerson p) es))
+else (projValAs LECTURERS (VPerson p) es))"
+
 
 (*
 "projValAs LECTURERS (VPerson p) [] = []"

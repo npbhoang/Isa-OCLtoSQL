@@ -96,7 +96,7 @@ COMMENT *)
 
 fun getAssignedPerson :: "string \<Rightarrow> Person list \<Rightarrow> Person" where
 "getAssignedPerson s [] = Person.PNULL"
-| "getAssignedPerson s (p#ps) = (if (s = (getIdPerson p)) then p else (getAssignedPerson s ps))"
+| "getAssignedPerson s (p#ps) = (if ((getIdPerson p) = s) then p else (getAssignedPerson s ps))"
 
 
 fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
@@ -104,7 +104,7 @@ fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 | "eval (MyOCL.Var x) om = [VObj x]"
 | "eval (MyOCL.Eq e1 e2) om = [VBool (equalValList (eval e1 om) (eval e2 om))]" 
 | "eval (MyOCL.Att (Var v) att) om = [(projValAtt att (VPerson (getAssignedPerson v (getPersonList om))))]"
-| "eval (MyOCL.As (Var v) as) om = projValAs as (VObj v) (getEnrollmentList om)"
+| "eval (MyOCL.As (Var v) as) om = projValAs as (VPerson (getAssignedPerson v (getPersonList om))) (getEnrollmentList om)"
 
 (* COMMENT
 | "eval (MyOCL.Size exp) om = [VInt (sizeValList (eval exp om))]"

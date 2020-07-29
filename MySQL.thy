@@ -142,9 +142,13 @@ and an expression, it returns the value that correspond to
 evaluat the expression for exactly that value (the only relevant
 cases are var and columns ---i.e., either attributes or association-ends) *)
 
+fun getType :: "col \<Rightarrow> col" where 
+"getType col.AGE = PINT"
+| "getType PINT = PINT"
+
 fun equalCol :: "(col \<times> column) \<Rightarrow> (col \<times> column) \<Rightarrow> bool" where
-"equalCol (Pair col1 (RID i1)) (Pair col2 (RID i2)) 
-= ((col1 = col2) \<and> (i1 = i2))" 
+"equalCol (Pair col1 i1) (Pair col2 i2) 
+= (((getType col1) = (getType col2)) \<and> (i1 = i2))" 
 
 fun equalColList :: "(col \<times> column) list \<Rightarrow> (col \<times> column) list \<Rightarrow> bool" where
 "equalColList [] [] = True"
@@ -154,7 +158,8 @@ fun equalColList :: "(col \<times> column) list \<Rightarrow> (col \<times> colu
 ((equalCol c1 c2) \<and> (equalColList cs1 cs2))"
 
 fun equalRow ::  "row \<Rightarrow> row \<Rightarrow> bool" where
-"equalRow (RTuple cs1) (RTuple cs2) = equalColList cs1 cs2"
+"equalRow (RTuple []) (RTuple []) = True"
+| "equalRow (RTuple cs1) (RTuple cs2) = equalColList cs1 cs2"
 
 fun getColumnInRow:: "col \<Rightarrow> (col \<times> column) list \<Rightarrow> (col \<times> column)" where
 "getColumnInRow col [] = Pair (PNULL) (RNULL)"
@@ -168,7 +173,7 @@ fun getColumn :: "col \<Rightarrow> row \<Rightarrow> (col \<times> column)" whe
 fun select :: "row \<Rightarrow> exp \<Rightarrow> row" where
 "select row (MySQL.Int i) = RTuple [(Pair PINT (RInt i))]"
 | "select row (MySQL.Var v) = RTuple [(Pair PSTRING (RID (IDVar v)))]"
-| "select row  (Eq e1 e2) = RTuple [(Pair PBOOL (RBool (equalRow (select row e1) (select row e2))))]"
+| "select row (Eq e1 e2) = RTuple [(Pair PBOOL (RBool (equalRow (select row e1) (select row e2))))]"
 | "select row (Col at) = RTuple [getColumn at row]"
 (*
 | "select val (GrtThan e1 e2) = VBool (greaterThanVal (select val e1) (select val e2))"
@@ -231,6 +236,7 @@ else (extCol val col es))"
 fun naselectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
 "naselectList [] exp = []"
 | "naselectList (row#rows) exp = (select row exp) # (naselectList rows exp)"
+
 (* FACT --- select over a list appended by two lists is the same as selct them individually *)
 lemma [simp]: "naselectList (xs@ys) exp = (naselectList xs exp) @ (naselectList ys exp)"
 proof (induct xs)
@@ -240,6 +246,7 @@ next
 case (Cons a xs)
 then show ?case by simp
 qed
+
 
 fun selectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
 (*
@@ -268,11 +275,15 @@ fun selectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
 
 fun isEqualID :: "pid \<Rightarrow> pid \<Rightarrow> bool" where
 "isEqualID (PID p1) (PID p2) = (p1 = p2)"
-| "isEqualID (IDVar var1) (IDVar var2) = (var1 = var2)"
+(*| "isEqualID (IDVar var1) (IDVar var2) = (var1 = var2)"
 | "isEqualID (PID p1) (IDVar var) = (p1 = var)"
+*)
 
 fun isSatisfiedColumn :: "column \<Rightarrow> exp \<Rightarrow> bool" where
+(*
 "isSatisfiedColumn (RID pid) (Var self) = isEqualID pid (IDVar self)"
+*)
+"isSatisfiedColumn (RID (PID i)) (Var self) = (i = self)" 
 
 fun isSatisfiedColColumnList :: "(col*column) list \<Rightarrow> exp \<Rightarrow> bool" where
 "isSatisfiedColColumnList (c#cs) (Eq (Col col2) (Var self)) = 
