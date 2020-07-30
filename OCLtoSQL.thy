@@ -48,12 +48,6 @@ termination evalWithCtx
 = (evalWithCtx src var val)"
 *)
 
-fun filterWithBody :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
-"filterWithBody Nil var (exp) = Nil" 
-| "filterWithBody (Cons val vs) var exp = (if (isTrueVal (evalWithCtx exp var val)) 
-    then (val#(filterWithBody vs var exp))   
-    else filterWithBody vs var exp)"
-
 fun collect :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "collect [] ivar exp = []"           
 | "collect (val#vs) ivar exp = (evalWithCtx exp ivar val)#(collect vs ivar exp)"
@@ -91,13 +85,44 @@ fun collectAux :: "val list \<Rightarrow> OCLexp \<Rightarrow> Enrollment \<Righ
 (extCol v (transAs col) [e])
 @(collectAux vs  (As (IVar p) col) e)"
 *)
-
 COMMENT *)
 
-fun getAssignedPerson :: "string \<Rightarrow> Person list \<Rightarrow> Person" where
-"getAssignedPerson s [] = Person.PNULL"
-| "getAssignedPerson s (p#ps) = (if ((getIdPerson p) = s) then p else (getAssignedPerson s ps))"
+fun getPersonFromVal :: "val \<Rightarrow> Person" where
+"getPersonFromVal (VPerson p) = p"
 
+fun evalForValue :: "Person \<Rightarrow> OCLexp \<Rightarrow> val" where
+"evalForValue p (IVar l) = (VPerson p)"
+| "evalForValue p (PEVar var ps) = (VPerson (getAssignedPerson var ps))"
+| "evalForValue p (PEAtt (Att l att.AGE)) = 
+VInt (getAgePerson (getPersonFromVal (evalForValue p l)))"
+| "evalForValue p (OCLexp.Int i) = (VInt i)"
+
+fun isVPersonSatisfied :: "Person \<Rightarrow> OCLexp \<Rightarrow> bool" where
+"isVPersonSatisfied p (OCLexp.Eq l r)
+= ((evalForValue p l) = (evalForValue p r))" 
+(*
+"isVPersonSatisfied p (OCLexp.Eq (IVar l) (PEVar caller ps)) 
+= (p = getAssignedPerson caller ps)"
+| "isVPersonSatisfied p (OCLexp.Eq (PEAtt (Att (IVar l) att.AGE)) (OCLexp.Int i))
+= (getAgePerson p = i)"
+*)
+
+fun isValSatisfied :: "val \<Rightarrow> OCLexp \<Rightarrow> bool" where
+"isValSatisfied (VPerson p) exp = isVPersonSatisfied p exp"
+
+fun filterSourceWithBody :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
+"filterSourceWithBody [] (IVar l) (bodyExp) = []"
+| "filterSourceWithBody (v#vs) (IVar l) exp = 
+(if (isValSatisfied v exp) 
+then (v#(filterSourceWithBody vs (IVar l) exp)) 
+else (filterSourceWithBody vs (IVar l) exp))"
+
+fun mapPersonToVal :: "Person \<Rightarrow> val" where
+"mapPersonToVal p = VPerson p"
+
+fun mapPersonListToValList :: "Person list \<Rightarrow> val list" where
+"mapPersonListToValList [] = []"
+| "mapPersonListToValList (p#ps) = (mapPersonToVal p)#(mapPersonListToValList ps)"
 
 fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "eval (MyOCL.Int i) om = [VInt i]"
@@ -105,12 +130,11 @@ fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 | "eval (MyOCL.Eq e1 e2) om = [VBool (equalValList (eval e1 om) (eval e2 om))]" 
 | "eval (MyOCL.Att (Var v) att) om = [(projValAtt att (VPerson (getAssignedPerson v (getPersonList om))))]"
 | "eval (MyOCL.As (Var v) as) om = projValAs as (VPerson (getAssignedPerson v (getPersonList om))) (getEnrollmentList om)"
-
-(* COMMENT
-| "eval (MyOCL.Size exp) om = [VInt (sizeValList (eval exp om))]"
-| "eval (MyOCL.IsEmpty exp) om = [VBool (isEmptyValList (eval exp om))]"
-| "eval (MyOCL.Exists src v body) om = [VBool (\<not> isEmptyValList (filterWithBody (eval src om) v (partialEval body om)))]"
+| "eval (MyOCL.Size exp) om = [VInt (size (eval exp om))]"
+| "eval (MyOCL.IsEmpty exp) om = [VBool ((size (eval exp om)) = 0)]"
+| "eval (MyOCL.Exists src v body) om = [VBool ((sizeList (filterSourceWithBody (eval src om) v (partialEval body om))) > 0)]"
 | "eval (MyOCL.AllInstances PERSON) om = mapPersonListToValList (getPersonList om)"
+(* COMMENT
 | "eval (MyOCL.Collect src v body) om = collect (eval src om) v (partialEval body om)"
 | "eval (MyOCL.CollectPlus src v body) om = collectPlus (eval src om) v (partialEval body om)"
 

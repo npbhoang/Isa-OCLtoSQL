@@ -161,56 +161,50 @@ proof (induct om)
   qed
 qed
 
-(* COMMENT
 (* self.lecturers\<rightarrow>size() \<equiv> SELECT COUNT *  FROM Enrollment WHERE students = self *)
-theorem "eval (MyOCL.Size (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
-= exec (SelectFromWhere (MySQL.Count MySQL.LECTURERS) 
+theorem "(valid self (getPersonList om)) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (MyOCL.Size (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om))
+= stripAlias (exec (SelectFromWhere (MySQL.CountAll) 
 (Table ENROLLMENT)
-(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (map om)))"
 proof (induct om)
 case (OM ps es)
-from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
-using TEnrollmentToValList by simp
 then show ?case
-proof (induct es)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a es)
-  then show ?case by simp
-qed
+  proof (induct es)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a es)
+    then show ?case by simp
+  qed
 qed
 
+
 (* self.lecturers\<rightarrow>isEmpty() \<equiv> SELECT COUNT * = 0 FROM Enrollment WHERE students = self *)
-theorem "eval (MyOCL.IsEmpty (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om
-= exec (SelectFromWhere (MySQL.Eq (MySQL.CountAll) (MySQL.Int 0)) 
+theorem "valid self (getPersonList om) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (MyOCL.IsEmpty (MyOCL.As (MyOCL.Var self) MyOCL.LECTURERS)) om)))
+= stripAlias (exec (SelectFromWhere (MySQL.Eq (MySQL.CountAll) (MySQL.Int 0)) 
 (Table ENROLLMENT)
-(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) om"
+(WHERE (MySQL.Eq (MySQL.Col (MySQL.STUDENTS)) (MySQL.Var self)))) (map om))"
 proof (induct om)
 case (OM ps es)
-from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
-using TEnrollmentToValList by simp
 then show ?case
-proof (induct es)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a es)
-  then show ?case by simp
-qed
+  proof (induct es)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a es)
+    then show ?case by simp
+  qed
 qed
 
 (* self.lecturers→exists(l|l=caller)  = SELECT COUNT *  > 0 FROM Enrollment WHERE self = students
 AND lecturers = caller *)
-theorem  "eval (MyOCL.Exists (MyOCL.As (Var self) MyOCL.LECTURERS) (MyOCL.IVar l) 
-(MyOCL.Eq (MyOCL.IVar l) (MyOCL.Var caller))) om
-= exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
-(WHERE (MySQL.And (MySQL.Eq (MySQL.Var self) (Col col.STUDENTS)) 
-(MySQL.Eq (MySQL.Var caller) (Col col.LECTURERS)))))) om"
+theorem "valid self (getPersonList om) \<and> valid caller (getPersonList om) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (MyOCL.Exists (MyOCL.As (Var self) MyOCL.LECTURERS) (MyOCL.IVar l) 
+(MyOCL.Eq (MyOCL.IVar l) (MyOCL.Var caller))) om))
+= stripAlias (exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table ENROLLMENT) 
+(WHERE (MySQL.And (MySQL.Eq (Col col.STUDENTS) (MySQL.Var self)) 
+(MySQL.Eq (Col col.LECTURERS) (MySQL.Var caller)))))) (map om)))"
 proof (induct om)
 case (OM ps es)
-from this have "(mapEnrollmentToValList es) = [TEnrollment (OM ps es)]" 
-using TEnrollmentToValList by simp
 then show ?case
  proof (induct es)
   case Nil
@@ -222,25 +216,27 @@ qed
 qed
 
 (* Person.allInstances() \<equiv> SELECT Person_id FROM Person *)
-theorem "eval (MyOCL.AllInstances PERSON) om
-= exec (SelectFrom (MySQL.Col MySQL.ID) (Table MySQL.PERSON)) om"
+theorem "stripAlias (OCL2PSQL (eval (MyOCL.AllInstances PERSON) om))
+= stripAlias (exec (SelectFrom (MySQL.Col MySQL.ID) (Table MySQL.PERSON)) (map om))"
 proof (induct om)
 case (OM ps es)
 then show ?case 
-proof (induct ps)
-  case Nil
-  then show ?case by simp
+  proof (induct ps)
+    case Nil
+    then show ?case by simp
   next
-  case (Cons a ps)
-  then show ?case by simp
-qed
-qed
+    case (Cons a ps)
+    then show ?case by simp
+  qed
+  qed
 
 (* Person.allInstances() \<rightarrow> exists(p|p.age = 30) 
 \<equiv> SELECT COUNT * > 0 FROM Person WHERE age = 30*)
-theorem "eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (IVar p) (MyOCL.Eq (MyOCL.Att (MyOCL.IVar p) (MyOCL.AGE)) (MyOCL.Int 30))) om
-= exec ((SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table MySQL.PERSON) 
-(WHERE (MySQL.Eq (Col col.AGE) (MySQL.Int 30))))) om"
+
+theorem "stripAlias (OCL2PSQL (eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (IVar p) (MyOCL.Eq
+(MyOCL.Att (MyOCL.IVar p) (MyOCL.AGE)) (MyOCL.Int 30))) om))
+= stripAlias (exec (SelectFromWhere (MySQL.GrtThan (CountAll) (MySQL.Int 0)) (Table MySQL.PERSON) 
+(WHERE (MySQL.Eq (Col col.AGE) (MySQL.Int 30)))) (map om))"
 proof (induct om)
 case (OM ps es)
 then show ?case
@@ -249,10 +245,12 @@ case Nil
   then show ?case by simp
 next
 case (Cons a ps)
-  then show ?case by simp
+then show ?case by simp
 qed  
 qed  
 
+
+(* COMMENT
 (* ASSUMPTION: Given a collect-then-flatten operator, if the source of this operator is the Person 
 list from the Object model and the for each of the Enrollment in the Object model, return
 the Person in the LECTURERS side *)       

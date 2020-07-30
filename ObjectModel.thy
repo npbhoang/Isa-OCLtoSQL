@@ -90,10 +90,11 @@ fun countValList :: "val list \<Rightarrow> int" where
 "countValList [] = 0" |
 "countValList (v#vs) = 1 + countValList vs"
 
-fun sizeValList :: "val list\<Rightarrow> nat" where
-"sizeValList [] = 0" |
-"sizeValList (x#xs) = Suc (sizeValList xs)"
-
+*)
+fun sizeList :: "'a list \<Rightarrow> nat" where 
+"sizeList [] = 0" |
+"sizeList (v#vs) = Suc (sizeList vs)"
+(*
 fun sizeVal :: "val \<Rightarrow> nat" where
 "sizeVal VNULL = 0" |
 "sizeVal (VList vs) = sizeValList vs"
@@ -105,8 +106,9 @@ fun isEmptyVal :: "val \<Rightarrow> bool" where
 "isEmptyVal (VList []) = True"
 | "isEmptyVal (VList (a#ls)) = False"
 
-fun isTrueVal :: "val \<Rightarrow> bool" where
-"isTrueVal (VBool val) = val"
-
 COMMENT *)
+
+fun getAssignedPerson :: "string \<Rightarrow> Person list \<Rightarrow> Person" where
+"getAssignedPerson s [] = Person.PNULL"
+| "getAssignedPerson s (p#ps) = (if ((getIdPerson p) = s) then p else (getAssignedPerson s ps))"
 end

@@ -249,17 +249,19 @@ qed
 
 
 fun selectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
-(*
 (* agregator expressions *)
-"selectList vs (Count col) = [VInt (sizeValList vs)]"
+
+"selectList vs (CountAll) =  [RTuple [Pair col.PINT (RInt (size vs))]]"
+| "selectList vs (Eq (CountAll) (MySQL.Int i)) = [RTuple [Pair col.PBOOL (RBool ((size vs) = i))]]"
+| "selectList vs (GrtThan (CountAll) (MySQL.Int i)) = [RTuple [Pair col.PBOOL (RBool ((sizeList vs) > i))]]"
+(*
+| "selectList vs (Count col) = [RTuple [Pair col.PINT (RInt (size vs))]]"
 | "selectList vs (Eq (Count col) (MySQL.Int i)) = [VBool (equalVal (VInt (sizeValList vs)) (VInt i))]"
 | "selectList vs (GrtThan (Count col) (MySQL.Int i)) = [VBool (greaterThanVal (VInt (sizeValList vs)) (VInt i))]"
-| "selectList vs (CountAll) =  [VInt (sizeValList vs)]"
-| "selectList vs (Eq (CountAll) (MySQL.Int i)) = [VBool (equalVal (VInt (sizeValList vs)) (VInt i))]"
-| "selectList vs (GrtThan (CountAll) (MySQL.Int i)) = [VBool (greaterThanVal (VInt (sizeValList vs)) (VInt i))]"
+
 *)
 (* no-agregator expressions *)
-"selectList vs exp = naselectList vs exp"
+| "selectList vs exp = naselectList vs exp"
 (*
 | "selectList Nil (MySQL.Int i) = Nil"
 | "selectList (v#vs) (MySQL.Int i) = (select v (MySQL.Int i)) # (selectList vs (MySQL.Int i))"
@@ -280,21 +282,20 @@ fun isEqualID :: "pid \<Rightarrow> pid \<Rightarrow> bool" where
 *)
 
 fun isSatisfiedColumn :: "column \<Rightarrow> exp \<Rightarrow> bool" where
-(*
-"isSatisfiedColumn (RID pid) (Var self) = isEqualID pid (IDVar self)"
-*)
 "isSatisfiedColumn (RID (PID i)) (Var self) = (i = self)" 
+| "isSatisfiedColumn (RInt i) (exp.Int l) = (i = l)" 
 
 fun isSatisfiedColColumnList :: "(col*column) list \<Rightarrow> exp \<Rightarrow> bool" where
-"isSatisfiedColColumnList (c#cs) (Eq (Col col2) (Var self)) = 
+"isSatisfiedColColumnList (c#cs) (Eq (Col col2) exp) = 
 (if (fst c) = col2
-then (isSatisfiedColumn (snd c) (Var self))
-else (isSatisfiedColColumnList cs (Eq (Col col2) (Var self))))"
+then (isSatisfiedColumn (snd c) exp)
+else (isSatisfiedColColumnList cs (Eq (Col col2) exp)))"
 
 fun isSatisfiedRow :: "row \<Rightarrow> exp \<Rightarrow> bool" where
-"isSatisfiedRow (RTuple cs) (Eq (Col col2) (Var self)) = 
-isSatisfiedColColumnList cs (Eq (Col col2) (Var self))"
-
+"isSatisfiedRow (RTuple cs) (Eq (Col col2) exp) = 
+isSatisfiedColColumnList cs (Eq (Col col2) exp)"
+| "isSatisfiedRow (RTuple cs) (And e1 e2)
+= ((isSatisfiedRow (RTuple cs) e1) \<and> (isSatisfiedRow (RTuple cs) e2))"
 
 (* 
 filterWhere: given a list of values --- currently, either the original Person table or
@@ -311,12 +312,14 @@ fun filterWhere :: "row list \<Rightarrow> whereClause \<Rightarrow> row list" w
 = (if isSatisfiedRow r (Eq (Col col2) (Var self)) 
   then (if (col2 = col.ID) then [r] else (r#filterWhere rs (WHERE (Eq (Col col2) (Var self)))))
   else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"
-
-(*
-| "filterWhere [TEnrollment (OM ps es)] (WHERE (And e1 e2))
-= filterEnrollments (And e1 e2) es"
-*)
-
+| "filterWhere (r#rs) (WHERE (Eq (Col col2) (MySQL.Int i)))
+= (if isSatisfiedRow r (Eq (Col col2) (MySQL.Int i)) 
+  then (r#filterWhere rs (WHERE (Eq (Col col2) (MySQL.Int i))))
+  else (filterWhere rs (WHERE (Eq (Col col2) (MySQL.Int i)))))"
+| "filterWhere (r#rs) (WHERE (And e1 e2))
+= (if isSatisfiedRow r (And e1 e2)
+then (r#filterWhere rs (WHERE (And e1 e2)))
+else filterWhere rs (WHERE (And e1 e2)))"
 
 (* This is to be discussed, completed later, when dealing with Subselect
 | "filterWhere (Cons v vs) (WHERE e) = (if (isTrueVal (select v e))  
@@ -382,15 +385,16 @@ model it returns a list of values. Notice that we keep the original
 table-type-name to be sued in selectlist *)
 fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
 "exec (Select selitems) sqlom = [select (RTuple [(Pair PNULL RNULL)]) selitems]"
+| "exec (SelectFrom exp (Table PERSON)) sqlom 
+    = selectList (mapPersonListToRowList (getSQLPersonList sqlom)) exp"    
 | "exec (SelectFromWhere exp (Table PERSON) whereExp) sqlom
     = selectList (filterWhere (mapPersonListToRowList (getSQLPersonList sqlom)) whereExp) exp"
 | "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) sqlom
-    = selectList (filterWhere (mapEnrollmentListToRowList (getSQLEnrollmentList sqlom)) whereExp) exp"    
+    = selectList (filterWhere (mapEnrollmentListToRowList (getSQLEnrollmentList sqlom)) whereExp) exp"
 (* COMMENT
 | "exec (SelectFrom exp (Table ENROLLMENT)) (OM ps es) 
     = selectList (mapEnrollmentToValList es) exp"
-| "exec (SelectFrom exp (Table PERSON)) (OM ps es) 
-    = selectList (mapPersonListToValList ps) exp"
+
 | "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) (OM ps es)
     = selectList (filterWhere (mapEnrollmentToValList es) whereExp) exp"
 
