@@ -240,41 +240,116 @@ theorem "stripAlias (OCL2PSQL (eval (MyOCL.Exists (MyOCL.AllInstances PERSON) (I
 proof (induct om)
 case (OM ps es)
 then show ?case
-proof (induct ps)
-case Nil
-  then show ?case by simp
-next
-case (Cons a ps)
-then show ?case by simp
-qed  
+  proof (induct ps)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a ps)
+    then show ?case by simp
+  qed  
 qed  
 
+(*
 
-(* COMMENT
 (* ASSUMPTION: Given a collect-then-flatten operator, if the source of this operator is the Person 
 list from the Object model and the for each of the Enrollment in the Object model, return
 the Person in the LECTURERS side *)       
 lemma lem4: "collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) (a # es))
 =  VPerson (getAssociationEnd col.LECTURERS a) # (collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) es))"
 sorry
+*)
 
-(* Person.allInstances()\<rightarrow>collect(p|p.lecturers)\<rightarrow>flatten()))
+lemma lem1 : "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) []) = []"
+proof (induct source)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a source)
+  then show ?case by simp
+qed
+
+(*
+lemma lem2 : "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) (v#vs))
+= (flatten (evalForValue (getPersonFromVal val) (PEAs (As (IVar p) as.LECTURERS) [v])))@
+collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) vs)"
+proof (induct source)
+  case Nil
+  then show ?case
+  apply simp
+next
+  case (Cons a source)
+  then show ?case sorry
+qed
+*)
+
+fun isUnique :: "Person \<Rightarrow> Person list \<Rightarrow> bool" where
+"isUnique v [] = True"
+| "isUnique v (v1#vs) = (\<not>(v=v1) \<and> (isUnique v vs))"
+
+fun validPersonList :: "Person list \<Rightarrow> bool" where
+"validPersonList [] = True"
+| "validPersonList (v#vs) = ((isUnique v vs) \<and> (validPersonList vs))"
+
+fun isPersonInPersonList :: "Person \<Rightarrow> Person list => bool" where
+"isPersonInPersonList p [] = False"
+| "isPersonInPersonList v (v1#vs) =  (if (v = v1) then True else (isPersonInPersonList v vs))"
+
+fun isEnrollmentInPersonList :: "Enrollment \<Rightarrow> Person list \<Rightarrow> bool" where
+"isEnrollmentInPersonList e [] = False"
+| "isEnrollmentInPersonList e (p#ps) = (
+(isPersonInPersonList (getAssociationEnd as.STUDENTS e) ps) \<and>
+(isPersonInPersonList (getAssociationEnd as.LECTURERS e) ps))"
+
+lemma [simp]: "validPersonList ps ⟹ 
+isPersonInPersonList (getAssociationEnd as.STUDENTS a) ps ⟹
+ collectAux (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) [a]) 
+= [VPerson (getAssociationEnd as.LECTURERS a)]"
+
+proof (induct ps)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons p ps)
+  then show ?case by simp
+qed
+
+lemma [simp]: "(validPersonList ps) \<and> (isEnrollmentInPersonList a ps) \<Longrightarrow>
+collectAux (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) [a])
+= [VPerson (getAssociationEnd as.LECTURERS a)]"
+proof (induct ps)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons p ps)
+  then show ?case by simp
+qed
+
+fun validEnrollmentList :: "Enrollment list \<Rightarrow> Person list \<Rightarrow> bool" where
+"validEnrollmentList [] ps = True"
+| "validEnrollmentList (e#es) ps = ((isEnrollmentInPersonList e ps) \<and> (validEnrollmentList es ps))"
+
+fun isValidOM :: "Objectmodel \<Rightarrow> bool" where
+"isValidOM (OM ps es) = ((validPersonList ps) \<and> (validEnrollmentList es ps))"
+
+(* Person.allInstances() \<rightarrow> collect(p|p.lecturers)\<rightarrow>flatten()))
 \<equiv> SELECT lecturers FROM Enrollment *)
-lemma " eval (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) om
-= exec (SelectFrom (Col MySQL.LECTURERS) (Table ENROLLMENT)) om"
+lemma "(isValidOM om) \<Longrightarrow> (stripAlias 
+(OCL2PSQL ( eval (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) om))
+= stripAlias (exec (SelectFrom (Col MySQL.LECTURERS) (Table ENROLLMENT)) (map om)))"
 proof (induct om)
 case (OM ps es)
 then show ?case
-proof (induct es)
-case Nil
-then show ?case by simp
-next
-case (Cons a es)
-then show ?case using lem4 by simp
-qed
+  proof (induct es)
+    case Nil
+    then show ?case using lem1 by simp
+  next
+    case (Cons a es)
+    then show ?case using lem3 by simp
+  qed
 qed
 
 
+(* COMMENT
 (* ASSUMPTION: When join a single Enrollment object with the Person list 
 from the Object Model under the on-expression col = ID then
 return the tuple contains the Enrollment and the Person rightaway *)  

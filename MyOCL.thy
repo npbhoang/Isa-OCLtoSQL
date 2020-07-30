@@ -33,21 +33,15 @@ fun partialEval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> OCLexp" where
 | "partialEval (MyOCL.IVar i) om = (MyOCL.IVar i)"
 | "partialEval (MyOCL.Var x) om = PEVar x (getPersonList om)"
 | "partialEval (MyOCL.Att (IVar v) att) om = (PEAtt (MyOCL.Att (IVar v) att))"
+| "partialEval (MyOCL.As (IVar v) as) om = (PEAs (MyOCL.As (IVar v) as) (getEnrollmentList om))"
 (*
 | "partialEval (MyOCL.Var x) om = (getAssignedPerson x (getPersonList om))"
-*)
-(*
-
 | "partialEval (MyOCL.Att (Var v) att) om = (PEAtt (MyOCL.Att (Var v) att))"
 | "partialEval (MyOCL.As (Var v) as) om = (PEAs (MyOCL.As (Var v) as) (getEnrollmentList om))"
-| "partialEval (MyOCL.As (IVar v) as) om = (PEAs (MyOCL.As (IVar v) as) (getEnrollmentList om))"
 *)
 
-(* COMMENT
 fun flatten :: "val \<Rightarrow> val list" where
 "flatten (VList vs) = vs" 
-
-COMMENT *)
 
 (* projVal: given a column-expression and a row --either in person or enrollment table--,
 it returns the corresonding value *)

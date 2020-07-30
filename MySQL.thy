@@ -386,14 +386,15 @@ table-type-name to be sued in selectlist *)
 fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
 "exec (Select selitems) sqlom = [select (RTuple [(Pair PNULL RNULL)]) selitems]"
 | "exec (SelectFrom exp (Table PERSON)) sqlom 
-    = selectList (mapPersonListToRowList (getSQLPersonList sqlom)) exp"    
+    = selectList (mapPersonListToRowList (getSQLPersonList sqlom)) exp"  
+| "exec (SelectFrom exp (Table ENROLLMENT)) sqlom
+    = selectList (mapEnrollmentListToRowList (getSQLEnrollmentList sqlom)) exp"
 | "exec (SelectFromWhere exp (Table PERSON) whereExp) sqlom
     = selectList (filterWhere (mapPersonListToRowList (getSQLPersonList sqlom)) whereExp) exp"
 | "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) sqlom
     = selectList (filterWhere (mapEnrollmentListToRowList (getSQLEnrollmentList sqlom)) whereExp) exp"
 (* COMMENT
-| "exec (SelectFrom exp (Table ENROLLMENT)) (OM ps es) 
-    = selectList (mapEnrollmentToValList es) exp"
+
 
 | "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) (OM ps es)
     = selectList (filterWhere (mapEnrollmentToValList es) whereExp) exp"

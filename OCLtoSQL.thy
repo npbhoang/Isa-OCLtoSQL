@@ -62,33 +62,15 @@ case (Cons a xs)
 then show ?case by simp
 qed
 
-fun collectPlus :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
-"collectPlus [] ivar exp = []"           
-| "collectPlus (val#vs) ivar exp = 
-(flatten (evalWithCtx exp ivar val))@ (collectPlus vs ivar exp)"
-(* FACT --- perform a collect operator from a list 
-appended by two lists is same of perform a collect opeartor on them individually *)    
-lemma [simp] : "collectPlus valList (IVar p) (PEAs (As (IVar p) as) []) = []"
-proof (induct valList)
-case Nil
-then show ?case by simp
-next
-case (Cons a valList)
-then show ?case by simp
-qed
-
-
-(*
-fun collectAux :: "val list \<Rightarrow> OCLexp \<Rightarrow> Enrollment \<Rightarrow> val list" where
-"collectAux []  (As (IVar p) as.LECTURERS) en = []"
-| "collectAux (v#vs)  (As (IVar p) col) e = 
-(extCol v (transAs col) [e])
-@(collectAux vs  (As (IVar p) col) e)"
 *)
-COMMENT *)
 
 fun getPersonFromVal :: "val \<Rightarrow> Person" where
 "getPersonFromVal (VPerson p) = p"
+
+(*projValAs as (VPerson (getAssignedPerson v (getPersonList om))) (getEnrollmentList om)*)
+
+fun addValIntoVList :: "val \<Rightarrow> val \<Rightarrow> val" where
+"addValIntoVList v (VList vs) = VList (v#vs)"
 
 fun evalForValue :: "Person \<Rightarrow> OCLexp \<Rightarrow> val" where
 "evalForValue p (IVar l) = (VPerson p)"
@@ -96,16 +78,36 @@ fun evalForValue :: "Person \<Rightarrow> OCLexp \<Rightarrow> val" where
 | "evalForValue p (PEAtt (Att l att.AGE)) = 
 VInt (getAgePerson (getPersonFromVal (evalForValue p l)))"
 | "evalForValue p (OCLexp.Int i) = (VInt i)"
+| "evalForValue p (PEAs (As l as) es)
+= VList (projValAs as (evalForValue p l) es)"
+
+(*
+lemma lem2: "evalForValue p (PEAs (As l as.LECTURERS) (e#es))
+= (if ((getAssociationEnd as.STUDENTS e) = p) 
+then (addValIntoVList (VPerson (getAssociationEnd as.LECTURERS e)) (evalForValue p (PEAs (As l as.LECTURERS) es))) 
+else (evalForValue p (PEAs (As l as.LECTURERS) es)))"
+sorry
+*)
+
+fun collectAux :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
+"collectAux [] ivar exp = []"
+| "collectAux (v#vs) ivar (PEAs (As (IVar p) as.LECTURERS) [e]) =
+(if ((getAssociationEnd as.STUDENTS e) = (getPersonFromVal v)) then [(VPerson (getAssociationEnd as.LECTURERS e))]
+else (collectAux vs ivar (PEAs (As (IVar p) as.LECTURERS) [e])))"
+
+
+fun collectPlus :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
+"collectPlus [] ivar exp = []"           
+| "collectPlus (val#vs) ivar exp = 
+(flatten (evalForValue (getPersonFromVal val) exp))@(collectPlus vs ivar exp)"
+
+lemma lem3: "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) (e#es))
+= (collectAux source ivar (PEAs (As (IVar p) as.LECTURERS) [e]))@(collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) es))"
+  sorry
 
 fun isVPersonSatisfied :: "Person \<Rightarrow> OCLexp \<Rightarrow> bool" where
 "isVPersonSatisfied p (OCLexp.Eq l r)
 = ((evalForValue p l) = (evalForValue p r))" 
-(*
-"isVPersonSatisfied p (OCLexp.Eq (IVar l) (PEVar caller ps)) 
-= (p = getAssignedPerson caller ps)"
-| "isVPersonSatisfied p (OCLexp.Eq (PEAtt (Att (IVar l) att.AGE)) (OCLexp.Int i))
-= (getAgePerson p = i)"
-*)
 
 fun isValSatisfied :: "val \<Rightarrow> OCLexp \<Rightarrow> bool" where
 "isValSatisfied (VPerson p) exp = isVPersonSatisfied p exp"
@@ -134,9 +136,10 @@ fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 | "eval (MyOCL.IsEmpty exp) om = [VBool ((size (eval exp om)) = 0)]"
 | "eval (MyOCL.Exists src v body) om = [VBool ((sizeList (filterSourceWithBody (eval src om) v (partialEval body om))) > 0)]"
 | "eval (MyOCL.AllInstances PERSON) om = mapPersonListToValList (getPersonList om)"
+| "eval (MyOCL.CollectPlus src v body) om = collectPlus (eval src om) v (partialEval body om)"
 (* COMMENT
 | "eval (MyOCL.Collect src v body) om = collect (eval src om) v (partialEval body om)"
-| "eval (MyOCL.CollectPlus src v body) om = collectPlus (eval src om) v (partialEval body om)"
+
 
 
 fun translate :: "OCLexp \<Rightarrow> MySQL.exp" where
