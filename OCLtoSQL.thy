@@ -67,6 +67,10 @@ qed
 fun getPersonFromVal :: "val \<Rightarrow> Person" where
 "getPersonFromVal (VPerson p) = p"
 
+fun getPersonListFromValList :: "val list \<Rightarrow> Person list" where
+"getPersonListFromValList [] = []"
+| "getPersonListFromValList (v#vs) = (getPersonFromVal v)#(getPersonListFromValList vs)"
+
 (*projValAs as (VPerson (getAssignedPerson v (getPersonList om))) (getEnrollmentList om)*)
 
 fun addValIntoVList :: "val \<Rightarrow> val \<Rightarrow> val" where
@@ -89,21 +93,77 @@ else (evalForValue p (PEAs (As l as.LECTURERS) es)))"
 sorry
 *)
 
-fun collectAux :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
-"collectAux [] ivar exp = []"
-| "collectAux (v#vs) ivar (PEAs (As (IVar p) as.LECTURERS) [e]) =
-(if ((getAssociationEnd as.STUDENTS e) = (getPersonFromVal v)) then [(VPerson (getAssociationEnd as.LECTURERS e))]
-else (collectAux vs ivar (PEAs (As (IVar p) as.LECTURERS) [e])))"
+fun isUnique :: "Person \<Rightarrow> Person list \<Rightarrow> bool" where
+"isUnique v [] = True"
+| "isUnique v (v1#vs) = (\<not>(v=v1) \<and> (isUnique v vs))"
 
+fun validPersonList :: "Person list \<Rightarrow> bool" where
+"validPersonList [] = True"
+| "validPersonList (v#vs) = ((isUnique v vs) \<and> (validPersonList vs))"
+
+fun isPersonInPersonList :: "Person \<Rightarrow> Person list => bool" where
+"isPersonInPersonList p [] = False"
+| "isPersonInPersonList v (v1#vs) =  (if (v = v1) then True else (isPersonInPersonList v vs))"
+
+
+
+fun isEnrollmentInPersonList :: "Enrollment \<Rightarrow> Person list \<Rightarrow> bool" where
+"isEnrollmentInPersonList e ps = 
+((isPersonInPersonList (getAssociationEnd as.STUDENTS e) ps) \<and>
+(isPersonInPersonList (getAssociationEnd as.LECTURERS e) ps))"
+
+
+fun validEnrollmentList :: "Enrollment list \<Rightarrow> Person list \<Rightarrow> bool" where
+"validEnrollmentList [] ps = True"
+| "validEnrollmentList (e#es) ps = ((isEnrollmentInPersonList e ps) \<and> (validEnrollmentList es ps))"
+
+
+fun collectAuxMin :: "val \<Rightarrow> as \<Rightarrow> Enrollment list \<Rightarrow> val list" where
+"collectAuxMin v as.LECTURERS [] = []"
+| "collectAuxMin v as.LECTURERS (e#es) =
+(if (getAssociationEnd as.STUDENTS e) = (getPersonFromVal v)
+then [(VPerson (getAssociationEnd as.LECTURERS e))]
+else (collectAuxMin v as.LECTURERS es))"
+
+fun collectAux :: "val \<Rightarrow> OCLexp \<Rightarrow> val list" where
+"collectAux v (PEAs (As (IVar p) as.LECTURERS) es) = collectAuxMin v as.LECTURERS es"
+
+(*"collectAux v  (PEAs (As (IVar p) as.LECTURERS) []) = []"
+| "collectAux v  (PEAs (As (IVar p) as.LECTURERS) (e#es))
+= collectAuxMin v e as.LECTURERS @ (collectAux v  (PEAs (As (IVar p) as.LECTURERS) es))"
+*)
+(* "collectAux v ivar (PEAs (As (IVar p) as.LECTURERS) [e]) =
+(if ((getAssociationEnd as.STUDENTS e) = (getPersonFromVal v)) then 
+[(VPerson (getAssociationEnd as.LECTURERS e))]
+else [])"
+*)
 
 fun collectPlus :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "collectPlus [] ivar exp = []"           
-| "collectPlus (val#vs) ivar exp = 
-(flatten (evalForValue (getPersonFromVal val) exp))@(collectPlus vs ivar exp)"
+| "collectPlus (val#vs) ivar exp = (collectAux val  exp)@(collectPlus vs ivar exp)"
 
-lemma lem3: "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) (e#es))
-= (collectAux source ivar (PEAs (As (IVar p) as.LECTURERS) [e]))@(collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) es))"
+(*
+(flatten (evalForValue (getPersonFromVal val) exp)) @ (collectPlus vs ivar exp) "
+*)
+(*
+lemma [simp]: "OCLtoSQL.isUnique p (getPersonListFromValList source) \<Longrightarrow>
+    getAssociationEnd as.STUDENTS e = p \<Longrightarrow> 
+collectAux source ivar (PEAs (As (IVar i) as.LECTURERS) [e]) = []"
   sorry
+*)
+
+(*
+lemma lemaaux: "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) (e#es))
+= (collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) es))@(collectAux source ivar (PEAs (As (IVar p) as.LECTURERS) [e]))"
+  proof (induct source)
+    case Nil
+    then show ?case by simp
+  next
+    case (Cons a source)
+    then show ?case 
+      sorry
+  qed
+*)
 
 fun isVPersonSatisfied :: "Person \<Rightarrow> OCLexp \<Rightarrow> bool" where
 "isVPersonSatisfied p (OCLexp.Eq l r)

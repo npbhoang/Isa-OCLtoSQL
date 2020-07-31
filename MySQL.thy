@@ -297,21 +297,33 @@ isSatisfiedColColumnList cs (Eq (Col col2) exp)"
 | "isSatisfiedRow (RTuple cs) (And e1 e2)
 = ((isSatisfiedRow (RTuple cs) e1) \<and> (isSatisfiedRow (RTuple cs) e2))"
 
-(* 
-filterWhere: given a list of values --- currently, either the original Person table or
-the original Enrollment table --- and a where-clause, it returns the values that satisfy 
-(select equals to true) the where-clause 
-*)
-(* This is a temporary hack: the special if-then-else only works for Person-table where
-ID is a primary key
-*)
+fun findIDCell :: "(col*column) list \<Rightarrow> column" where
+"findIDCell [] = RNULL"
+| "findIDCell (c#cs) = (if (fst c = MySQL.ID) 
+then (snd c) else (findIDCell cs))"
+
+fun isSameRow :: "row \<Rightarrow> row \<Rightarrow> bool" where
+"isSameRow (RTuple cs1) (RTuple cs2) = ((findIDCell cs1) = (findIDCell cs2))"
+
+fun isUnique :: "row \<Rightarrow> row list \<Rightarrow> bool" where
+"isUnique r [] = True"
+| "isUnique r (r1#rs) = (\<not>(isSameRow r r1) \<and> (isUnique r rs))"
+
+fun isValid :: "row list \<Rightarrow> bool" where
+"isValid [] = True"
+| "isValid (v#vs) = ((isUnique v vs) \<and> (isValid vs))"
 
 fun filterWhere :: "row list \<Rightarrow> whereClause \<Rightarrow> row list" where
 "filterWhere [] exp =  []"
-| "filterWhere (r#rs) (WHERE (Eq (Col col2) (Var self)))
+(*| "filterWhere (r#rs) (WHERE (Eq (Col col2) (Var self)))
 = (if isSatisfiedRow r (Eq (Col col2) (Var self)) 
   then (if (col2 = col.ID) then [r] else (r#filterWhere rs (WHERE (Eq (Col col2) (Var self)))))
-  else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"
+  else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"*)
+| "filterWhere (r#rs) (WHERE (Eq (Col col2) (Var self)))
+= (if (isSatisfiedRow r (Eq (Col col2) (Var self))) 
+then (if (col2 = col.ID \<and> isValid (r#rs)) then [r] else (r#filterWhere rs (WHERE (Eq (Col col2) (Var self)))))
+else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"
+
 | "filterWhere (r#rs) (WHERE (Eq (Col col2) (MySQL.Int i)))
 = (if isSatisfiedRow r (Eq (Col col2) (MySQL.Int i)) 
   then (r#filterWhere rs (WHERE (Eq (Col col2) (MySQL.Int i))))

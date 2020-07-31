@@ -1,6 +1,15 @@
 theory MyMain
-  imports Main MyOCL MySQL OCLtoSQL
-  begin 
+  imports Main MyOCL MySQL OCLtoSQL "~~/src/HOL/Library/Multiset"
+begin 
+
+(* ASSUMPTION: ID IS UNIQUE FOR PERSON *)
+lemma [simp]: "(getIdPerson a = getIdPerson p) \<longleftrightarrow> (a = p)"
+  sorry
+
+(*
+lemma [simp]: "getIdPerson a \<noteq> getIdPerson p \<Longrightarrow> a \<noteq> p"
+  sorry
+*)
 
 lemma (* 1 \<equiv> SELECT 1 *)
 "OCL2PSQL (eval (MyOCL.Int i) om) = exec (Select (MySQL.Int i)) (map om)"
@@ -50,7 +59,30 @@ next
   then show ?case by simp
 qed 
 
-theorem "(valid self (getPersonList om)) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (MyOCL.Att (MyOCL.Var self) (MyOCL.AGE)) om))    
+lemma [simp]: "MySQL.isUnique (RTuple
+       [(ID, RID (PID (getIdPerson a))), (col.AGE, RInt (getAgePerson a)),
+        (col.EMAIL, RString (getEmailSQLPerson (mapPersonToSQLPerson a)))]) 
+(mapPersonListToRowList (mapPersonListToSQLPersonList x1a)) = OCLtoSQL.isUnique a x1a"
+proof (induct x1a)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons x x1a)
+  then show ?case by simp
+qed
+
+lemma [simp]: "isValid (mapPersonListToRowList (mapPersonListToSQLPersonList x1a)) = validPersonList x1a"
+proof (induct x1a)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a x1a)
+  then show ?case by auto
+qed
+
+(*self.age \<equiv> SELECT age FROM Person WHERE Person_id = self *)
+theorem "(valid self (getPersonList om)) \<and> (validPersonList (getPersonList om)) 
+\<Longrightarrow> (stripAlias (OCL2PSQL (eval (MyOCL.Att (MyOCL.Var self) (MyOCL.AGE)) om))    
 = stripAlias (exec (SelectFromWhere (MySQL.Col (MySQL.AGE)) (Table MySQL.PERSON) 
 (WHERE (MySQL.Eq (MySQL.Col (MySQL.ID)) (MySQL.Var self)))) (map om)))"
 proof (induct om)
@@ -61,7 +93,7 @@ proof (induct om)
     then show ?case by simp
   next
     case (Cons a x1a)
-    then show ?case by simp
+    then show ?case by auto
   qed
 qed
 
@@ -82,13 +114,6 @@ proof (induct a)
   case (E p1 p2)
   then show ?case by simp
 qed
-
-(* ID IS UNIQUE *)
-lemma [simp]: "getIdPerson a = getIdPerson p \<Longrightarrow> a = p"
-  sorry
-
-lemma [simp]: "getIdPerson a \<noteq> getIdPerson p \<Longrightarrow> a \<noteq> p"
-  sorry
 
 lemma [simp]: "valid i ps ⟹ getIdPerson (getAssignedPerson i ps) = i"
 proof (induct ps)
@@ -126,7 +151,7 @@ qed
 
 
 (* self.age = 30 \<equiv> SELECT age = 30 FROM Person WHERE id = self *)
-theorem "(valid self (getPersonList om)) \<Longrightarrow> 
+theorem "(valid self (getPersonList om)) \<and> (validPersonList (getPersonList om)) \<Longrightarrow> 
 (stripAlias (OCL2PSQL (eval (MyOCL.Eq 
 (MyOCL.Att (MyOCL.Var self) MyOCL.AGE) (MyOCL.Int 30)) om))
 = stripAlias( exec (SelectFromWhere (MySQL.Eq (MySQL.Col (MySQL.AGE)) (MySQL.Int 30))
@@ -140,7 +165,7 @@ proof (induct om)
     then show ?case by simp
   next
     case (Cons a ps)
-    then show ?case by simp
+    then show ?case by auto
   qed
 qed  
 
@@ -157,7 +182,7 @@ proof (induct om)
     then show ?case by simp
   next
     case (Cons a es)
-    then show ?case by simp
+    then show ?case by auto
   qed
 qed
 
@@ -174,7 +199,7 @@ then show ?case
     then show ?case by simp
   next
     case (Cons a es)
-    then show ?case by simp
+    then show ?case by auto
   qed
 qed
 
@@ -192,7 +217,7 @@ then show ?case
     then show ?case by simp
   next
     case (Cons a es)
-    then show ?case by simp
+    then show ?case by auto
   qed
 qed
 
@@ -211,7 +236,7 @@ then show ?case
   then show ?case by simp
 next
   case (Cons a es)
-  then show ?case by simp
+  then show ?case by auto
 qed
 qed
 
@@ -228,7 +253,7 @@ then show ?case
     case (Cons a ps)
     then show ?case by simp
   qed
-  qed
+qed
 
 (* Person.allInstances() \<rightarrow> exists(p|p.age = 30) 
 \<equiv> SELECT COUNT * > 0 FROM Person WHERE age = 30*)
@@ -249,17 +274,7 @@ then show ?case
   qed  
 qed  
 
-(*
-
-(* ASSUMPTION: Given a collect-then-flatten operator, if the source of this operator is the Person 
-list from the Object model and the for each of the Enrollment in the Object model, return
-the Person in the LECTURERS side *)       
-lemma lem4: "collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) (a # es))
-=  VPerson (getAssociationEnd col.LECTURERS a) # (collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) es))"
-sorry
-*)
-
-lemma lem1 : "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) []) = []"
+lemma [simp]: "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) []) = []"
 proof (induct source)
   case Nil
   then show ?case by simp
@@ -268,43 +283,21 @@ next
   then show ?case by simp
 qed
 
-(*
-lemma lem2 : "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) (v#vs))
-= (flatten (evalForValue (getPersonFromVal val) (PEAs (As (IVar p) as.LECTURERS) [v])))@
-collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) vs)"
-proof (induct source)
+
+lemma [simp]: "getPersonListFromValList (mapPersonListToValList ps) = ps"
+proof (induct ps)
   case Nil
-  then show ?case
-  apply simp
+  then show ?case by simp
 next
-  case (Cons a source)
-  then show ?case sorry
+  case (Cons a ps)
+  then show ?case by simp
 qed
-*)
 
-fun isUnique :: "Person \<Rightarrow> Person list \<Rightarrow> bool" where
-"isUnique v [] = True"
-| "isUnique v (v1#vs) = (\<not>(v=v1) \<and> (isUnique v vs))"
-
-fun validPersonList :: "Person list \<Rightarrow> bool" where
-"validPersonList [] = True"
-| "validPersonList (v#vs) = ((isUnique v vs) \<and> (validPersonList vs))"
-
-fun isPersonInPersonList :: "Person \<Rightarrow> Person list => bool" where
-"isPersonInPersonList p [] = False"
-| "isPersonInPersonList v (v1#vs) =  (if (v = v1) then True else (isPersonInPersonList v vs))"
-
-fun isEnrollmentInPersonList :: "Enrollment \<Rightarrow> Person list \<Rightarrow> bool" where
-"isEnrollmentInPersonList e [] = False"
-| "isEnrollmentInPersonList e (p#ps) = (
-(isPersonInPersonList (getAssociationEnd as.STUDENTS e) ps) \<and>
-(isPersonInPersonList (getAssociationEnd as.LECTURERS e) ps))"
-
+(*
 lemma [simp]: "validPersonList ps ⟹ 
 isPersonInPersonList (getAssociationEnd as.STUDENTS a) ps ⟹
  collectAux (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) [a]) 
 = [VPerson (getAssociationEnd as.LECTURERS a)]"
-
 proof (induct ps)
   case Nil
   then show ?case by simp
@@ -312,7 +305,9 @@ next
   case (Cons p ps)
   then show ?case by simp
 qed
+*)
 
+(*
 lemma [simp]: "(validPersonList ps) \<and> (isEnrollmentInPersonList a ps) \<Longrightarrow>
 collectAux (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) [a])
 = [VPerson (getAssociationEnd as.LECTURERS a)]"
@@ -323,13 +318,33 @@ next
   case (Cons p ps)
   then show ?case by simp
 qed
-
-fun validEnrollmentList :: "Enrollment list \<Rightarrow> Person list \<Rightarrow> bool" where
-"validEnrollmentList [] ps = True"
-| "validEnrollmentList (e#es) ps = ((isEnrollmentInPersonList e ps) \<and> (validEnrollmentList es ps))"
+*)
 
 fun isValidOM :: "Objectmodel \<Rightarrow> bool" where
 "isValidOM (OM ps es) = ((validPersonList ps) \<and> (validEnrollmentList es ps))"
+
+fun listToBag :: "'a list \<Rightarrow> 'a multiset" where
+"listToBag [] = {#}"
+| "listToBag (v#vs) =  {# v #} + (listToBag vs)"
+
+lemma [simp]: "listToBag (xs@ys) = (listToBag xs) + (listToBag ys)"
+  sorry
+
+lemma [simp]: "validPersonList ps ∧ 
+isPersonInPersonList (getAssociationEnd as.STUDENTS a) ps \<and>
+isPersonInPersonList (getAssociationEnd as.LECTURERS a) ps
+\<Longrightarrow>
+listToBag (collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) (a # es)))
+= listToBag ((VPerson (getAssociationEnd as.LECTURERS a))#(collectPlus (mapPersonListToValList ps) (IVar p)
+(PEAs (As (IVar p) as.LECTURERS) es)))" 
+proof (induct ps)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a ps)
+  then show ?case apply auto
+qed
+
 
 (* Person.allInstances() \<rightarrow> collect(p|p.lecturers)\<rightarrow>flatten()))
 \<equiv> SELECT lecturers FROM Enrollment *)
@@ -341,10 +356,10 @@ case (OM ps es)
 then show ?case
   proof (induct es)
     case Nil
-    then show ?case using lem1 by simp
+    then show ?case by simp
   next
     case (Cons a es)
-    then show ?case using lem3 by simp
+    then show ?case by simp
   qed
 qed
 
