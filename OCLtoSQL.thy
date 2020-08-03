@@ -140,7 +140,7 @@ else [])"
 
 fun collectPlus :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
 "collectPlus [] ivar exp = []"           
-| "collectPlus (val#vs) ivar exp = (collectAux val  exp)@(collectPlus vs ivar exp)"
+| "collectPlus (val#vs) ivar exp = (collectAux val exp)@(collectPlus vs ivar exp)"
 
 (*
 (flatten (evalForValue (getPersonFromVal val) exp)) @ (collectPlus vs ivar exp) "
@@ -186,6 +186,22 @@ fun mapPersonListToValList :: "Person list \<Rightarrow> val list" where
 "mapPersonListToValList [] = []"
 | "mapPersonListToValList (p#ps) = (mapPersonToVal p)#(mapPersonListToValList ps)"
 
+fun collectAuxButReturnVal :: "val \<Rightarrow> OCLexp \<Rightarrow> val" where
+"collectAuxButReturnVal VNULL oclexp = VNULL"
+
+fun collect :: "val list \<Rightarrow> OCLexp \<Rightarrow> OCLexp \<Rightarrow> val list" where
+"collect [] ivar exp = []"           
+| "collect (val#vs) ivar exp = (collectAuxButReturnVal val exp)#(collect vs ivar exp)"
+
+lemma [simp]: "collect (xs@ys) ivar exp = (collect xs ivar exp) @ (collect ys ivar exp)"
+proof (induct xs)
+case Nil
+then show ?case by simp
+next
+case (Cons a xs)
+then show ?case by simp
+qed
+
 fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 "eval (MyOCL.Int i) om = [VInt i]"
 | "eval (MyOCL.Var x) om = [VObj x]"
@@ -197,13 +213,6 @@ fun eval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> val list" where
 | "eval (MyOCL.Exists src v body) om = [VBool ((sizeList (filterSourceWithBody (eval src om) v (partialEval body om))) > 0)]"
 | "eval (MyOCL.AllInstances PERSON) om = mapPersonListToValList (getPersonList om)"
 | "eval (MyOCL.CollectPlus src v body) om = collectPlus (eval src om) v (partialEval body om)"
-(* COMMENT
 | "eval (MyOCL.Collect src v body) om = collect (eval src om) v (partialEval body om)"
 
-
-
-fun translate :: "OCLexp \<Rightarrow> MySQL.exp" where
-"translate (MyOCL.Int i) = MySQL.Int i" |
-"translate (Att (IVar p) att) = MySQL.Col (transAtt att)"
-COMMENT *)
 end

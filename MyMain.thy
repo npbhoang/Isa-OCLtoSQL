@@ -37,6 +37,15 @@ fun stripAlias :: "row list \<Rightarrow> row list" where
 "stripAlias [] = []"
 | "stripAlias (r#rs) = (stripAliasRow r)#(stripAlias rs)"
 
+lemma [simp]: "stripAlias (xs@ys) = (stripAlias xs) @ (stripAlias ys)"
+proof (induct xs)
+case Nil
+then show ?case by simp
+next
+case (Cons a xs)
+then show ?case by simp
+qed
+
 fun valid :: "string \<Rightarrow> Person list \<Rightarrow> bool" where
 "valid s [] = False"
 | "valid s (p#ps) = (if (s = (getIdPerson p)) then True else (valid s ps))"
@@ -342,13 +351,13 @@ proof (induct ps)
   then show ?case by simp
 next
   case (Cons a ps)
-  then show ?case apply auto
+  then show ?case sorry
 qed
 
 
 (* Person.allInstances() \<rightarrow> collect(p|p.lecturers)\<rightarrow>flatten()))
 \<equiv> SELECT lecturers FROM Enrollment *)
-lemma "(isValidOM om) \<Longrightarrow> (stripAlias 
+theorem thm1: "(isValidOM om) \<Longrightarrow> (stripAlias 
 (OCL2PSQL ( eval (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) om))
 = stripAlias (exec (SelectFrom (Col MySQL.LECTURERS) (Table ENROLLMENT)) (map om)))"
 proof (induct om)
@@ -359,36 +368,28 @@ then show ?case
     then show ?case by simp
   next
     case (Cons a es)
-    then show ?case by simp
+    then show ?case sorry
   qed
 qed
 
-
-(* COMMENT
-(* ASSUMPTION: When join a single Enrollment object with the Person list 
-from the Object Model under the on-expression col = ID then
-return the tuple contains the Enrollment and the Person rightaway *)  
-lemma lem5 : "joinValWithValList (VEnrollment a) (mapPersonListToValList ps) 
-(exp.Eq (Col col.LECTURERS) (Col ID))
-= [VJoin [VEnrollment a, (VPerson (getAssociationEnd col.LECTURERS a))]]"
-sorry
-
 (* Person.allInstances()\<rightarrow>collect(p|p.lecturers\<rightarrow>collect(l|l.email))
 \<equiv> SELECT email FROM Person JOIN Enrollment ON Person_id = lecturers *)
-lemma "eval (Collect (CollectPlus (AllInstances MyOCL.PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) 
-(IVar l) (MyOCL.Att (IVar l) (MyOCL.EMAIL))) om
-= exec (SelectFromJoin (Col MySQL.EMAIL) (Table MySQL.ENROLLMENT) (JOIN (Table MySQL.PERSON) (MySQL.Eq (Col MySQL.LECTURERS) (Col MySQL.ID)))) om"
+theorem "(isValidOM om) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (Collect (CollectPlus 
+(AllInstances MyOCL.PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) 
+(IVar l) (MyOCL.Att (IVar l) (MyOCL.EMAIL))) om))
+= stripAlias (exec (SelectFromJoin (Col MySQL.EMAIL) (Table MySQL.PERSON) 
+(JOIN (Table MySQL.ENROLLMENT) (MySQL.Eq (Col MySQL.ID) (Col MySQL.LECTURERS)))) (map om)))"
 proof (induct om)
 case (OM ps es)
 then show ?case
-proof (induct es)
-case Nil
-then show ?case by simp
+  proof (induct es)
+  case Nil
+  then show ?case by simp
 next
-case (Cons a es)
-then show ?case using lem4 lem5 by simp
+  case (Cons e es)
+  then show ?case sorry
+  qed
 qed
-qed
-COMMENT *)
+
 end
 

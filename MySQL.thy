@@ -83,6 +83,16 @@ fun OCL2PSQL :: "val list \<Rightarrow> row list" where
 "OCL2PSQL [] = []" 
 | "OCL2PSQL (val#list) = (RTuple [Pair (typeToCol val) (valToCol val)])#(OCL2PSQL list)"
 
+lemma [simp]: "OCL2PSQL (xs@ys) = (OCL2PSQL xs)@(OCL2PSQL ys)"
+proof(induct xs)
+case Nil
+then show ?case by simp
+next
+case (Cons a xs)
+then show ?case by simp
+qed
+
+
 datatype exp = Int nat 
 | Var var 
   | Eq exp exp
@@ -363,6 +373,7 @@ fun getFromItem :: "fromItem \<Rightarrow> Objectmodel \<Rightarrow>val list" wh
 "getFromItem (Table PERSON) om = [TPerson om]"
 | "getFromItem (Table ENROLLMENT) om = [TEnrollment om]"
 *)
+COMMENT *)
 
 (* 
 checkOnCondition: given two values, each from each side of the join 
@@ -373,24 +384,39 @@ is a column from the Person table and the right hand side is a column from the E
 it returns the 
 boolean indicates that the two values return true when evaluated them on the on-expression.
 *)
-fun  checkOnCondition :: "val \<Rightarrow> val \<Rightarrow> exp \<Rightarrow> bool" where
-"checkOnCondition val (VEnrollment e) (Eq (Col enrollmentCol) (Col personCol))
-= equalVal (select val (Col personCol)) (select (VEnrollment e) (Col enrollmentCol))"
 
-fun joinValWithValList :: "val \<Rightarrow> val list \<Rightarrow> exp \<Rightarrow> val list" where
+fun getCell :: "(col*column) list \<Rightarrow> col \<Rightarrow> column" where
+"getCell [] col = RNULL"
+| "getCell (c#cs) col = (if (fst c) = col then snd c else (getCell cs col))"
+
+fun  checkOnCondition :: "row \<Rightarrow> row \<Rightarrow> exp \<Rightarrow> bool" where
+"checkOnCondition (RTuple cs1) (RTuple cs2) (Eq (Col aRowFromCS1) (Col aRowFromCS2))
+= ((getCell cs1 aRowFromCS1) = (getCell cs2 aRowFromCS2))"
+
+fun joinRow :: "row \<Rightarrow> row \<Rightarrow> row" where
+"joinRow (RTuple cs1) (RTuple cs2) = RTuple (cs1@cs2)"
+
+fun joinValWithValList :: "row \<Rightarrow> row list \<Rightarrow> exp \<Rightarrow> row list" where
 "joinValWithValList val [] exp = []"
-| "joinValWithValList val (val1#valList1) exp = 
+| "joinValWithValList val (val1#valList1) exp =
 (if (checkOnCondition val val1 exp) 
-then ((VJoin [val,val1])#(joinValWithValList val valList1 exp))
+then (joinRow val val1) # (joinValWithValList val valList1 exp)
 else (joinValWithValList val valList1 exp))"
 
-fun joinValListWithValList :: "val list \<Rightarrow> val list \<Rightarrow> exp \<Rightarrow> val list" where
+fun joinValListWithValList :: "row list \<Rightarrow> row list \<Rightarrow> exp \<Rightarrow> row list" where
 "joinValListWithValList [] valList2 exp = []"
 | "joinValListWithValList (val1#valList1) valList2 exp 
 = (joinValWithValList val1 valList2 exp)
 @(joinValListWithValList valList1 valList2 exp)"
 
-COMMENT *)
+lemma [simp]: "joinValListWithValList aList [] exp = []"
+proof (induct aList)
+case Nil
+then show ?case by simp
+next
+case (Cons a aList)
+then show ?case by simp
+qed
 
 (* exec: this is the key function: given a SQL-expression and and object
 model it returns a list of values. Notice that we keep the original
@@ -405,13 +431,12 @@ fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
     = selectList (filterWhere (mapPersonListToRowList (getSQLPersonList sqlom)) whereExp) exp"
 | "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) sqlom
     = selectList (filterWhere (mapEnrollmentListToRowList (getSQLEnrollmentList sqlom)) whereExp) exp"
-(* COMMENT
+| "exec (SelectFromJoin exp (Table PERSON) (JOIN (Table ENROLLMENT) onExp)) sqlom
+= selectList (joinValListWithValList (mapPersonListToRowList (getSQLPersonList sqlom)) 
+(mapEnrollmentListToRowList (getSQLEnrollmentList sqlom)) onExp) exp"
 
-
+(* 
 | "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) (OM ps es)
     = selectList (filterWhere (mapEnrollmentToValList es) whereExp) exp"
-
-| "exec (SelectFromJoin exp (Table ENROLLMENT) (JOIN (Table PERSON) onExp)) (OM ps es)
-= selectList (joinValListWithValList (mapEnrollmentToValList es) (mapPersonListToValList ps) onExp) exp"
-COMMENT *)
+ *)
 end
