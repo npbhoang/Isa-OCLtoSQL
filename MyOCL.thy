@@ -19,9 +19,6 @@ datatype OCLexp = Int nat
   | Size OCLexp
   | IsEmpty OCLexp
   | Exists OCLexp OCLexp OCLexp
-  | Collect OCLexp OCLexp OCLexp
-  (* collect with the body returns a collect-type, then flatten afterwards*)
-  | CollectPlus OCLexp OCLexp OCLexp 
   | PEAtt OCLexp
   | PEAs OCLexp "Enrollment list"
   | PEVar var "Person list"
@@ -34,18 +31,6 @@ fun partialEval :: "OCLexp \<Rightarrow> Objectmodel \<Rightarrow> OCLexp" where
 | "partialEval (MyOCL.Var x) om = PEVar x (getPersonList om)"
 | "partialEval (MyOCL.Att (IVar v) att) om = (PEAtt (MyOCL.Att (IVar v) att))"
 | "partialEval (MyOCL.As (IVar v) as) om = (PEAs (MyOCL.As (IVar v) as) (getEnrollmentList om))"
-(*
-| "partialEval (MyOCL.Var x) om = (getAssignedPerson x (getPersonList om))"
-| "partialEval (MyOCL.Att (Var v) att) om = (PEAtt (MyOCL.Att (Var v) att))"
-| "partialEval (MyOCL.As (Var v) as) om = (PEAs (MyOCL.As (Var v) as) (getEnrollmentList om))"
-*)
-
-fun flatten :: "val \<Rightarrow> val list" where
-"flatten (VList vs) = vs" 
-
-(* projVal: given a column-expression and a row --either in person or enrollment table--,
-it returns the corresonding value *)
-
 
 fun projValAtt :: "att \<Rightarrow> val \<Rightarrow> val" where 
 "projValAtt AGE (VPerson p) = VInt (getAgePerson p)"
@@ -62,11 +47,4 @@ fun projValAs :: "as \<Rightarrow> val \<Rightarrow> Enrollment list \<Rightarro
 then ((VPerson (getAssociationEnd LECTURERS e))#(projValAs LECTURERS (VPerson p) es))
 else (projValAs LECTURERS (VPerson p) es))"
 
-(*
-"projValAs LECTURERS (VPerson p) [] = []"
-| "projValAs LECTURERS (VPerson p) (e#es) = 
-(if (getAssociationEnd STUDENTS e) = p 
-then ((VPerson (getAssociationEnd STUDENTS e))#(projValAs LECTURERS (VPerson p) es))
-else (projValAs LECTURERS (VPerson p) es))"
-*)
 end

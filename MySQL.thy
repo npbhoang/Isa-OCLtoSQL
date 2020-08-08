@@ -113,22 +113,6 @@ datatype SQLstm = Select exp
   | SelectFromWhere exp fromItem whereClause 
   | SelectFromJoin exp fromItem joinClause
 
-  
-
-(* COMMENT
-fun opposite :: "col \<Rightarrow> col" where
-"opposite STUDENTS = LECTURERS"
-  | "opposite LECTURERS = STUDENTS"
-
-(* projValList: given a  expression and a list of rows,
- it returns the list of values corresponding to calling projVal for each row in the given list *)
-
-fun projValList :: "exp \<Rightarrow> val list \<Rightarrow> val list" where
-"projValList exp Nil = Nil"
-| "projValList exp (v#vs) = (projVal exp v)#(projValList exp vs)"
-
-COMMENT *)
-
 fun mapPersonToSQLPerson :: "Person \<Rightarrow> SQLPerson" where
 "mapPersonToSQLPerson (P pid age email) = (SQLP (PID pid) age email)"
 | "mapPersonToSQLPerson Person.PNULL = SQLPNULL"
@@ -146,11 +130,6 @@ fun mapEnrollmentListToSQLEnrollmentList :: "Enrollment list \<Rightarrow> SQLEn
 
 fun map :: "Objectmodel \<Rightarrow> SQLObjectmodel" where
 "map (OM ps es) = SQLOM (mapPersonListToSQLPersonList ps) (mapEnrollmentListToSQLEnrollmentList es)"
-
-(* select: given a value --either a person or an enrollment--
-and an expression, it returns the value that correspond to
-evaluat the expression for exactly that value (the only relevant
-cases are var and columns ---i.e., either attributes or association-ends) *)
 
 fun getType :: "col \<Rightarrow> col" where 
 "getType col.AGE = PINT"
@@ -185,63 +164,6 @@ fun select :: "row \<Rightarrow> exp \<Rightarrow> row" where
 | "select row (MySQL.Var v) = RTuple [(Pair PSTRING (RID (IDVar v)))]"
 | "select row (Eq e1 e2) = RTuple [(Pair PBOOL (RBool (equalRow (select row e1) (select row e2))))]"
 | "select row (Col at) = RTuple [getColumn at row]"
-(*
-| "select val (GrtThan e1 e2) = VBool (greaterThanVal (select val e1) (select val e2))"
-| "select val (And e1 e2) = VBool (andVal (select val e1) (select val e2))"
-*)
-(* filterEnrollments: given an expression and an enrollment list,
-it filter out the enrollment list based on the result of the expression
-for each enrollment *)
-
-(* COMMENT
-fun filterEnrollments :: "exp \<Rightarrow> Enrollment list \<Rightarrow> val list" where
-"filterEnrollments exp Nil = Nil"
-| "filterEnrollments exp (e#es) = (if (isTrueVal (select (VEnrollment e) exp)) 
-  then ((VEnrollment e)#(filterEnrollments exp es)) 
-  else (filterEnrollments exp es))"
-
-(* filterPersons: given an expression and a person list,
-it filters out the person list based on the result of the expression
-for each person *)
-
-fun filterPersons :: "exp \<Rightarrow> Person list \<Rightarrow> val list" where
-"filterPersons exp Nil = Nil"
-| "filterPersons exp (p#ps) = (if (isTrueVal (select (VPerson p) exp)) 
-  then ((VPerson p)#(filterPersons exp ps)) 
-  else (filterPersons exp ps))"
-
-(*
-fun selectNoCtx :: "exp \<Rightarrow> val list" where
-"selectNoCtx (MySQL.Int i) = [VInt i]"
-| "selectNoCtx (MySQL.Var v) = [VObj v]"
-| "selectNoCtx (MySQL.Eq e1 e2) = [VBool (equalVal (VList (selectNoCtx e1)) (VList (selectNoCtx e2)))]"
-*)
-
-
-(* extEnrollment: given an object ---currently, we consider VObj v--- and column
-and a list of enrollments, it returns the list of enrollments such that
-the unknown ---VObj v--- value of the variable-expression 
-occupies the column position in the enrollment *)
-
-fun extEnrollments :: "val \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
-"extEnrollments (VObj v) col Nil = Nil" 
-| "extEnrollments (VObj v) col (e#es) = (if ((VPerson (getAssociationEnd col e)) = (VObj v)) 
-    then (VEnrollment e)#(extEnrollments (VObj v) col es) 
-    else extEnrollments (VObj v) col es)"
-
-(* extCol: given a val ---either a value of the variable-expression VObj v 
-or a Person VPerson p--- and column
-and a list of enrollments, it returns the list of values
-that occupies the column position in the enrollments such that
-the val ---VObj v or VPerson p---
-occupies the opposite column position in the enrollment *)
-
-fun extCol :: "val \<Rightarrow> col \<Rightarrow> Enrollment list \<Rightarrow> val list" where
-"extCol val col [] = []" 
-| "extCol val col (e#es) = (if (VPerson (getAssociationEnd (opposite col) e)) = val
-then (((VPerson (getAssociationEnd col e)))#(extCol val col es))  
-else (extCol val col es))" 
-*)
 
 fun naselectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
 "naselectList [] exp = []"
@@ -260,36 +182,15 @@ qed
 
 fun selectList :: "row list \<Rightarrow> exp \<Rightarrow> row list" where
 (* agregator expressions *)
-
 "selectList vs (CountAll) =  [RTuple [Pair col.PINT (RInt (size vs))]]"
 | "selectList vs (Eq (CountAll) (MySQL.Int i)) = [RTuple [Pair col.PBOOL (RBool ((size vs) = i))]]"
 | "selectList vs (GrtThan (CountAll) (MySQL.Int i)) = [RTuple [Pair col.PBOOL (RBool ((sizeList vs) > i))]]"
-(*
-| "selectList vs (Count col) = [RTuple [Pair col.PINT (RInt (size vs))]]"
-| "selectList vs (Eq (Count col) (MySQL.Int i)) = [VBool (equalVal (VInt (sizeValList vs)) (VInt i))]"
-| "selectList vs (GrtThan (Count col) (MySQL.Int i)) = [VBool (greaterThanVal (VInt (sizeValList vs)) (VInt i))]"
 
-*)
 (* no-agregator expressions *)
 | "selectList vs exp = naselectList vs exp"
-(*
-| "selectList Nil (MySQL.Int i) = Nil"
-| "selectList (v#vs) (MySQL.Int i) = (select v (MySQL.Int i)) # (selectList vs (MySQL.Int i))"
-| "selectList Nil (MySQL.Var var) = Nil"
-| "selectList (v#vs) (MySQL.Var var) = (select v (MySQL.Var var)) # (selectList vs (MySQL.Var var))"
-| "selectList Nil (Eq e1 e2) = Nil"
-| "selectList (v#vs) (Eq e1 e2) = (select v (Eq e1 e2)) # (selectList vs (Eq e1 e2))"
-| "selectList Nil (GrtThan e1 e2) = Nil"
-| "selectList (v#vs) (GrtThan e1 e2) = (select v (GrtThan e1 e2)) # (selectList vs (GrtThan e1 e2))"
-| "selectList Nil (And e1 e2) = Nil"
-| "selectList (v#vs) (And e1 e2) = (select v (And e1 e2)) # (selectList vs (And e1 e2))"
-*)
 
 fun isEqualID :: "pid \<Rightarrow> pid \<Rightarrow> bool" where
 "isEqualID (PID p1) (PID p2) = (p1 = p2)"
-(*| "isEqualID (IDVar var1) (IDVar var2) = (var1 = var2)"
-| "isEqualID (PID p1) (IDVar var) = (p1 = var)"
-*)
 
 fun isSatisfiedColumn :: "column \<Rightarrow> exp \<Rightarrow> bool" where
 "isSatisfiedColumn (RID (PID i)) (Var self) = (i = self)" 
@@ -325,15 +226,10 @@ fun isValid :: "row list \<Rightarrow> bool" where
 
 fun filterWhere :: "row list \<Rightarrow> whereClause \<Rightarrow> row list" where
 "filterWhere [] exp =  []"
-(*| "filterWhere (r#rs) (WHERE (Eq (Col col2) (Var self)))
-= (if isSatisfiedRow r (Eq (Col col2) (Var self)) 
-  then (if (col2 = col.ID) then [r] else (r#filterWhere rs (WHERE (Eq (Col col2) (Var self)))))
-  else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"*)
 | "filterWhere (r#rs) (WHERE (Eq (Col col2) (Var self)))
 = (if (isSatisfiedRow r (Eq (Col col2) (Var self))) 
 then (if (col2 = col.ID \<and> isValid (r#rs)) then [r] else (r#filterWhere rs (WHERE (Eq (Col col2) (Var self)))))
 else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"
-
 | "filterWhere (r#rs) (WHERE (Eq (Col col2) (MySQL.Int i)))
 = (if isSatisfiedRow r (Eq (Col col2) (MySQL.Int i)) 
   then (r#filterWhere rs (WHERE (Eq (Col col2) (MySQL.Int i))))
@@ -343,53 +239,11 @@ else (filterWhere rs (WHERE (Eq (Col col2) (Var self)))))"
 then (r#filterWhere rs (WHERE (And e1 e2)))
 else filterWhere rs (WHERE (And e1 e2)))"
 
-(* This is to be discussed, completed later, when dealing with Subselect
-| "filterWhere (Cons v vs) (WHERE e) = (if (isTrueVal (select v e))  
-    then (v#(filterWhere vs (WHERE e)))   
-    else filterWhere vs (WHERE e))"
-*)
-
-(* COMMENT
-lemma TPersonToValList: "[TPerson (OM ps es)] = mapPersonListToValList ps"
-sorry
-
-lemma TEnrollmentToValList: "[TEnrollment (OM ps es)] = mapEnrollmentToValList es"
-sorry
-
-(* 
-getFromItem: given a from item --- currently, either the original Person table or
-the original Enrollment table --- and an object model, it returns the val list indicates
-the whole original Person table or the original Enrollment table under the val form.
-
-Notice that TPerson and TEnrollment are special constructors which represents the notion
-of the whole table, for the time being, we need to keep the object model within.
-
-For additional usage which requires [TPerson om] of the actual list form (i.e. (VPerson p)#ps)
-consider using lemma TPerson_ValList and TEnrollment_ValList.  
-*)
-
-(*
-fun getFromItem :: "fromItem \<Rightarrow> Objectmodel \<Rightarrow>val list" where
-"getFromItem (Table PERSON) om = [TPerson om]"
-| "getFromItem (Table ENROLLMENT) om = [TEnrollment om]"
-*)
-COMMENT *)
-
-(* 
-checkOnCondition: given two values, each from each side of the join 
----currently, these values are assumed to be VPerson and VEnrollment as the join now 
-is only between Person and Enrollment--- 
-and an on-expression ---currently, it is an equality expression where the left-hand side 
-is a column from the Person table and the right hand side is a column from the Enrollment table, 
-it returns the 
-boolean indicates that the two values return true when evaluated them on the on-expression.
-*)
-
 fun getCell :: "(col*column) list \<Rightarrow> col \<Rightarrow> column" where
 "getCell [] col = RNULL"
 | "getCell (c#cs) col = (if (fst c) = col then snd c else (getCell cs col))"
 
-fun  checkOnCondition :: "row \<Rightarrow> row \<Rightarrow> exp \<Rightarrow> bool" where
+fun checkOnCondition :: "row \<Rightarrow> row \<Rightarrow> exp \<Rightarrow> bool" where
 "checkOnCondition (RTuple cs1) (RTuple cs2) (Eq (Col aRowFromCS1) (Col aRowFromCS2))
 = ((getCell cs1 aRowFromCS1) = (getCell cs2 aRowFromCS2))"
 
@@ -418,9 +272,6 @@ case (Cons a aList)
 then show ?case by simp
 qed
 
-(* exec: this is the key function: given a SQL-expression and and object
-model it returns a list of values. Notice that we keep the original
-table-type-name to be sued in selectlist *)
 fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
 "exec (Select selitems) sqlom = [select (RTuple [(Pair PNULL RNULL)]) selitems]"
 | "exec (SelectFrom exp (Table PERSON)) sqlom 
@@ -435,8 +286,4 @@ fun exec :: "SQLstm \<Rightarrow> SQLObjectmodel \<Rightarrow> row list" where
 = selectList (joinValListWithValList (mapPersonListToRowList (getSQLPersonList sqlom)) 
 (mapEnrollmentListToRowList (getSQLEnrollmentList sqlom)) onExp) exp"
 
-(* 
-| "exec (SelectFromWhere exp (Table ENROLLMENT) whereExp) (OM ps es)
-    = selectList (filterWhere (mapEnrollmentToValList es) whereExp) exp"
- *)
 end

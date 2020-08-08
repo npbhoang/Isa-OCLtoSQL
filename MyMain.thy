@@ -1,15 +1,10 @@
 theory MyMain
-  imports Main MyOCL MySQL OCLtoSQL "~~/src/HOL/Library/Multiset"
+  imports Main MyOCL MySQL OCLtoSQL
 begin 
 
 (* ASSUMPTION: ID IS UNIQUE FOR PERSON *)
 lemma [simp]: "(getIdPerson a = getIdPerson p) \<longleftrightarrow> (a = p)"
-  sorry
-
-(*
-lemma [simp]: "getIdPerson a \<noteq> getIdPerson p \<Longrightarrow> a \<noteq> p"
-  sorry
-*)
+sorry
 
 lemma (* 1 \<equiv> SELECT 1 *)
 "OCL2PSQL (eval (MyOCL.Int i) om) = exec (Select (MySQL.Int i)) (map om)"
@@ -282,114 +277,6 @@ then show ?case
     then show ?case by simp
   qed  
 qed  
-
-lemma [simp]: "collectPlus source ivar (PEAs (As (IVar p) as.LECTURERS) []) = []"
-proof (induct source)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a source)
-  then show ?case by simp
-qed
-
-
-lemma [simp]: "getPersonListFromValList (mapPersonListToValList ps) = ps"
-proof (induct ps)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a ps)
-  then show ?case by simp
-qed
-
-(*
-lemma [simp]: "validPersonList ps ⟹ 
-isPersonInPersonList (getAssociationEnd as.STUDENTS a) ps ⟹
- collectAux (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) [a]) 
-= [VPerson (getAssociationEnd as.LECTURERS a)]"
-proof (induct ps)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons p ps)
-  then show ?case by simp
-qed
-*)
-
-(*
-lemma [simp]: "(validPersonList ps) \<and> (isEnrollmentInPersonList a ps) \<Longrightarrow>
-collectAux (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) [a])
-= [VPerson (getAssociationEnd as.LECTURERS a)]"
-proof (induct ps)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons p ps)
-  then show ?case by simp
-qed
-*)
-
-fun isValidOM :: "Objectmodel \<Rightarrow> bool" where
-"isValidOM (OM ps es) = ((validPersonList ps) \<and> (validEnrollmentList es ps))"
-
-fun listToBag :: "'a list \<Rightarrow> 'a multiset" where
-"listToBag [] = {#}"
-| "listToBag (v#vs) =  {# v #} + (listToBag vs)"
-
-lemma [simp]: "listToBag (xs@ys) = (listToBag xs) + (listToBag ys)"
-  sorry
-
-lemma [simp]: "validPersonList ps ∧ 
-isPersonInPersonList (getAssociationEnd as.STUDENTS a) ps \<and>
-isPersonInPersonList (getAssociationEnd as.LECTURERS a) ps
-\<Longrightarrow>
-listToBag (collectPlus (mapPersonListToValList ps) (IVar p) (PEAs (As (IVar p) as.LECTURERS) (a # es)))
-= listToBag ((VPerson (getAssociationEnd as.LECTURERS a))#(collectPlus (mapPersonListToValList ps) (IVar p)
-(PEAs (As (IVar p) as.LECTURERS) es)))" 
-proof (induct ps)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a ps)
-  then show ?case sorry
-qed
-
-
-(* Person.allInstances() \<rightarrow> collect(p|p.lecturers)\<rightarrow>flatten()))
-\<equiv> SELECT lecturers FROM Enrollment *)
-theorem thm1: "(isValidOM om) \<Longrightarrow> (stripAlias 
-(OCL2PSQL ( eval (CollectPlus (AllInstances PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) om))
-= stripAlias (exec (SelectFrom (Col MySQL.LECTURERS) (Table ENROLLMENT)) (map om)))"
-proof (induct om)
-case (OM ps es)
-then show ?case
-  proof (induct es)
-    case Nil
-    then show ?case by simp
-  next
-    case (Cons a es)
-    then show ?case sorry
-  qed
-qed
-
-(* Person.allInstances()\<rightarrow>collect(p|p.lecturers\<rightarrow>collect(l|l.email))
-\<equiv> SELECT email FROM Person JOIN Enrollment ON Person_id = lecturers *)
-theorem "(isValidOM om) \<Longrightarrow> (stripAlias (OCL2PSQL (eval (Collect (CollectPlus 
-(AllInstances MyOCL.PERSON) (IVar p) (MyOCL.As (IVar p) (MyOCL.LECTURERS))) 
-(IVar l) (MyOCL.Att (IVar l) (MyOCL.EMAIL))) om))
-= stripAlias (exec (SelectFromJoin (Col MySQL.EMAIL) (Table MySQL.PERSON) 
-(JOIN (Table MySQL.ENROLLMENT) (MySQL.Eq (Col MySQL.ID) (Col MySQL.LECTURERS)))) (map om)))"
-proof (induct om)
-case (OM ps es)
-then show ?case
-  proof (induct es)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons e es)
-  then show ?case sorry
-  qed
-qed
 
 end
 
