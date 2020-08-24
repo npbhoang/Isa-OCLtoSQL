@@ -13,7 +13,7 @@ datatype OCLLiteralExp = OCLNatLiteralExp nat
 | OCLIsEmptyExp OCLCollectionTypeExp
 | OCLIsNotEmptyExp OCLCollectionTypeExp
 
-datatype OCLexp = SINGLE OCLLiteralExp | COL OCLCollectionTypeExp
+datatype OCLexp = SINGLETYPE OCLLiteralExp | COLLECTIONTYPE OCLCollectionTypeExp
 
 datatype val =
 ValNat nat
@@ -28,20 +28,20 @@ fun getAllValPersons :: "Person list \<Rightarrow> val multiset" where
 fun evalAllInstances :: "entity \<Rightarrow> ObjectModel \<Rightarrow> val multiset" where
 "evalAllInstances PERSON om = getAllValPersons (getPersonList om)"
 
-fun evalSingle :: "OCLLiteralExp \<Rightarrow> ObjectModel \<Rightarrow> val multiset" 
-and evalCol :: "OCLCollectionTypeExp \<Rightarrow> ObjectModel \<Rightarrow> val multiset"
+fun evalSingleType :: "OCLLiteralExp \<Rightarrow> ObjectModel \<Rightarrow> val multiset" 
+and evalCollectionType :: "OCLCollectionTypeExp \<Rightarrow> ObjectModel \<Rightarrow> val multiset"
 where
-"evalSingle (OCLNatLiteralExp i) om = {# ValNat i #}"
-| "evalSingle (OCLStringLiteralExp s) om = {# ValString s #}"
-| "evalSingle (OCLBoolLiteralExp b) om = {# ValBool b #}"
-| "evalSingle (OCLSizeExp exp) om = {# ValNat (size (evalCol exp om)) #}"
-| "evalSingle (OCLIsEmptyExp exp) om = {# ValBool (size (evalCol exp om) = 0) #}"
-| "evalSingle (OCLIsNotEmptyExp exp) om = {# ValBool (size (evalCol exp om) \<noteq> 0) #}"
-| "evalCol (OCLAllInstancesExp entity) om = evalAllInstances entity om"
+"evalSingleType (OCLNatLiteralExp i) om = {# ValNat i #}"
+| "evalSingleType (OCLStringLiteralExp s) om = {# ValString s #}"
+| "evalSingleType (OCLBoolLiteralExp b) om = {# ValBool b #}"
+| "evalSingleType (OCLSizeExp exp) om = {# ValNat (size (evalCollectionType exp om)) #}"
+| "evalSingleType (OCLIsEmptyExp exp) om = {# ValBool (size (evalCollectionType exp om) = 0) #}"
+| "evalSingleType (OCLIsNotEmptyExp exp) om = {# ValBool (size (evalCollectionType exp om) \<noteq> 0) #}"
+| "evalCollectionType (OCLAllInstancesExp entity) om = evalAllInstances entity om"
 
 fun eval :: "OCLexp \<Rightarrow> ObjectModel \<Rightarrow> val multiset" where
-"eval (SINGLE exp) om = evalSingle exp om"
-| "eval (COL exp) om = evalCol exp om"
+"eval (SINGLETYPE exp) om = evalSingleType exp om"
+| "eval (COLLECTIONTYPE exp) om = evalCollectionType exp om"
 
 
 end
